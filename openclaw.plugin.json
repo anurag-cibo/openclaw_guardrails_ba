@@ -1,0 +1,21 @@
+{
+  "id": "guardrail-spike",
+  "name": "OpenClaw Guardrail Plugin",
+  "description": "Bachelorarbeitsprojekt: pluginbasierte Tool-Use-Guardrails fuer OpenClaw exec-Aufrufe.",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": true,
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": ["observe", "enforce"],
+        "default": "enforce"
+      },
+      "logFile": {
+        "type": "string",
+        "default": "/home/node/.openclaw/guardrail-enforce.log"
+      }
+    }
+  }
+}

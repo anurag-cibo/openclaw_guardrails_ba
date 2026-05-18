@@ -1,0 +1,11 @@
+node_modules/
+*.log
+*.jsonl
+.env
+.env.*
+.DS_Store
+coverage/
+dist/
+tmp/
+openclaw.json
+exec-approvals.json

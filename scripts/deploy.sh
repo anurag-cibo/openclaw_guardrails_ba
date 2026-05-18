@@ -47,8 +47,17 @@ read_openclaw_config_dir() {
   printf '%s\n' "$value"
 }
 
+check_required_files() {
+  [ -f "$COMPOSE_FILE_1" ] || fail "docker-compose.yml not found: $COMPOSE_FILE_1"
+  [ -f "$COMPOSE_FILE_2" ] || fail "docker-compose.ollama.override.yml not found: $COMPOSE_FILE_2"
+
+  for required in package.json openclaw.plugin.json index.js src/index.js; do
+    [ -f "$PROJECT_ROOT/$required" ] || fail "Missing required file: $PROJECT_ROOT/$required"
+  done
+}
+
 wait_for_gateway() {
-  local max_attempts="${1:-60}"
+  local max_attempts="${1:-90}"
   local attempt=1
 
   info "Waiting for gateway health on http://127.0.0.1:18789 ..."
@@ -60,7 +69,7 @@ wait_for_gateway() {
       if curl -fsS http://127.0.0.1:18789/readyz >/dev/null 2>&1; then
         info "Gateway readyz is reachable."
       else
-        warn "Gateway healthz is up, but readyz is not ready yet."
+        warn "Gateway healthz is reachable, but readyz is not ready yet."
       fi
 
       return 0
@@ -75,10 +84,11 @@ wait_for_gateway() {
 }
 
 hard_restart_gateway() {
-  warn "Normal gateway restart failed."
+  warn "Normal gateway restart/start failed."
   warn "Falling back to hard gateway cleanup."
   warn "This only targets containers whose name matches: openclaw-openclaw-gateway"
-  warn "It may ask for your sudo password to kill stuck container PIDs."
+  warn "It may ask for your sudo password to kill stuck gateway container PIDs."
+  warn "The script checks PID > 1 and does not touch Ollama."
 
   info "Disabling restart policy for existing gateway containers..."
   for c in $(docker ps -aq --filter "name=openclaw-openclaw-gateway"); do
@@ -107,26 +117,25 @@ hard_restart_gateway() {
   compose up -d "$SERVICE"
 }
 
-check_required_files() {
-  [ -f "$COMPOSE_FILE_1" ] || fail "docker-compose.yml not found: $COMPOSE_FILE_1"
-  [ -f "$COMPOSE_FILE_2" ] || fail "docker-compose.ollama.override.yml not found: $COMPOSE_FILE_2"
+ensure_gateway_running() {
+  info "Ensuring Ollama is running..."
+  compose up -d ollama
 
-  for required in package.json openclaw.plugin.json index.js src/index.js; do
-    [ -f "$PROJECT_ROOT/$required" ] || fail "Missing required file: $PROJECT_ROOT/$required"
-  done
+  info "Ensuring gateway service is running..."
+  if compose up -d "$SERVICE"; then
+    info "Gateway service start/up command completed."
+  else
+    hard_restart_gateway
+  fi
+
+  wait_for_gateway 90 || {
+    warn "Gateway healthcheck failed. Recent gateway logs:"
+    compose logs --tail 120 "$SERVICE" || true
+    exit 2
+  }
 }
 
-deploy_files() {
-  local openclaw_config_dir="$1"
-  local target_host="$openclaw_config_dir/local-plugins/guardrail-spike"
-
-  info "OpenClaw config dir on host: $openclaw_config_dir"
-  info "Deploy target on host: $target_host"
-  info "Deploy target in container: $TARGET_CONTAINER"
-
-  mkdir -p "$target_host"
-
-  info "Copying plugin files to host-mounted OpenClaw plugin directory..."
+create_source_tar() {
   cd "$PROJECT_ROOT"
 
   tar \
@@ -143,34 +152,81 @@ deploy_files() {
     README.md \
     docs \
     tests \
-    scripts \
-  | tar -xf - -C "$target_host"
-
-  info "Plugin files copied."
+    scripts
 }
 
-verify_deploy_target() {
+deploy_via_host_mount_if_possible() {
   local openclaw_config_dir="$1"
   local target_host="$openclaw_config_dir/local-plugins/guardrail-spike"
 
-  info "Files currently deployed:"
-  find "$target_host" -maxdepth 3 -type f | sort
+  if [ ! -d "$openclaw_config_dir" ]; then
+    warn "Host OpenClaw config dir does not exist or is not visible: $openclaw_config_dir"
+    return 1
+  fi
 
-  info "Host package.json:"
-  sed -n '1,80p' "$target_host/package.json"
+  if [ ! -w "$openclaw_config_dir" ]; then
+    warn "Host OpenClaw config dir is not writable by current user: $openclaw_config_dir"
+    return 1
+  fi
 
-  info "Host manifest:"
-  sed -n '1,120p' "$target_host/openclaw.plugin.json"
+  info "Deploying via writable host mount."
+  info "Host target: $target_host"
+
+  mkdir -p "$target_host"
+
+  create_source_tar | tar -xf - -C "$target_host"
+
+  info "Host-mount deployment completed."
+  return 0
+}
+
+deploy_via_container_user() {
+  info "Deploying via gateway container as default container user."
+
+  create_source_tar | compose exec -T "$SERVICE" sh -lc "
+    set -e
+    mkdir -p '$TARGET_CONTAINER'
+    tar -xf - -C '$TARGET_CONTAINER'
+  "
+}
+
+deploy_via_container_root() {
+  warn "Default container-user deployment failed."
+  warn "Retrying as root inside the gateway container, then chowning only the plugin directory to node:node."
+
+  create_source_tar | compose exec -T -u root "$SERVICE" sh -lc "
+    set -e
+    mkdir -p '$TARGET_CONTAINER'
+    tar -xf - -C '$TARGET_CONTAINER'
+    chown -R node:node '$TARGET_CONTAINER' || true
+    chmod -R u+rwX,go+rX '$TARGET_CONTAINER' || true
+  "
+}
+
+deploy_files() {
+  local openclaw_config_dir="$1"
+
+  info "OpenClaw config dir from .env/fallback: $openclaw_config_dir"
+  info "Container deploy target: $TARGET_CONTAINER"
+
+  if deploy_via_host_mount_if_possible "$openclaw_config_dir"; then
+    return 0
+  fi
+
+  warn "Falling back to container-based deployment."
+  ensure_gateway_running
+
+  if deploy_via_container_user; then
+    info "Container deployment completed as default user."
+  else
+    deploy_via_container_root
+    info "Container deployment completed as root fallback."
+  fi
 }
 
 restart_gateway() {
-  info "Ensuring Ollama is running..."
-  compose up -d ollama
+  info "Restarting gateway so plugin code is reloaded..."
 
-  info "Ensuring gateway service exists..."
-  compose up -d "$SERVICE"
-
-  info "Trying normal gateway restart..."
   if compose restart "$SERVICE"; then
     info "Normal gateway restart command completed."
   else
@@ -186,6 +242,7 @@ restart_gateway() {
 
 verify_inside_container() {
   info "Verifying plugin files from inside the gateway container..."
+
   compose exec -T "$SERVICE" sh -lc "
     echo '----- openclaw version -----'
     openclaw --version || true
@@ -196,9 +253,20 @@ verify_inside_container() {
     echo '----- plugin files -----'
     find '$TARGET_CONTAINER' -maxdepth 3 -type f | sort
 
+    echo '----- package.json -----'
+    cat '$TARGET_CONTAINER/package.json' || true
+
+    echo '----- root index.js -----'
+    cat '$TARGET_CONTAINER/index.js' || true
+
     echo '----- recent guardrail log -----'
     tail -n 50 /home/node/.openclaw/guardrail-enforce.log 2>/dev/null || true
   "
+}
+
+check_no_gateway_run_containers() {
+  info "Checking gateway containers..."
+  docker ps -a --filter "name=openclaw-openclaw-gateway" --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}"
 }
 
 main() {
@@ -210,9 +278,9 @@ main() {
   OPENCLAW_CONFIG_DIR="$(read_openclaw_config_dir)"
 
   deploy_files "$OPENCLAW_CONFIG_DIR"
-  verify_deploy_target "$OPENCLAW_CONFIG_DIR"
   restart_gateway
   verify_inside_container
+  check_no_gateway_run_containers
 
   info "Deployment complete."
   info "Next: test in the WebUI with a simple pwd exec prompt."

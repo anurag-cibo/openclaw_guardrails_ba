@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
+  "scripts": {
+    "test": "node --test tests/normalize-command.test.js tests/policy.test.js"
+  },
   "openclaw": {
     "extensions": ["./src/index.js"]
   }

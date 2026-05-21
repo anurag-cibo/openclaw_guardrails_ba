@@ -1,94 +1,136 @@
-import fs from "node:fs";
-
-const LOG_FILE = "/home/node/.openclaw/guardrail-enforce.log";
+import { toOpenClawHookResult } from "./approval.js";
+import { Decisions } from "./decisions.js";
+import { createLogger, safeJson } from "./logger.js";
+import { evaluateExecPolicy } from "./policy.js";
 
 function keysOf(value) {
   return value && typeof value === "object" ? Object.keys(value).sort() : [];
 }
 
-function safe(value) {
+function safeCall(fn) {
   try {
-    return JSON.parse(JSON.stringify(value));
+    return fn();
   } catch {
-    return String(value);
+    return undefined;
   }
 }
 
-function append(entry) {
-  const line = JSON.stringify({
-    ts: new Date().toISOString(),
-    ...entry
-  });
-  fs.appendFileSync(LOG_FILE, line + "\n", "utf8");
+function readConfigObject(candidate) {
+  if (!candidate) {
+    return {};
+  }
+
+  if (typeof candidate === "function") {
+    const value = safeCall(candidate);
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  }
+
+  if (typeof candidate === "object" && !Array.isArray(candidate)) {
+    return candidate;
+  }
+
+  return {};
 }
 
-function normalizeCommand(command) {
-  return String(command || "").trim().replace(/\s+/g, " ");
+function getConfigViaGetter(candidate, key) {
+  if (!candidate || typeof candidate.get !== "function") {
+    return undefined;
+  }
+
+  try {
+    return candidate.get(key);
+  } catch {
+    return undefined;
+  }
 }
 
-function classifyExec(command) {
-  const cmd = normalizeCommand(command);
+function resolveRuntimeConfig(api) {
+  const merged = {
+    ...readConfigObject(api?.config),
+    ...readConfigObject(api?.pluginConfig)
+  };
 
-  if (!cmd) {
-    return {
-      decision: "allow",
-      severity: "none",
-      ruleId: "exec.empty",
-      reason: "empty command"
-    };
-  }
-
-  if (/^(pwd|ls(\s|$)|grep(\s|$)|find(\s|$)|git status$|pytest(\s|$)|npm test$)/.test(cmd)) {
-    return {
-      decision: "allow",
-      severity: "low",
-      ruleId: "exec.safe.readonly",
-      reason: "known benign workspace command"
-    };
-  }
-
-  if (/^rm\s+-rf\s+guardrail-lab\/tmp\/?$/.test(cmd)) {
-    return {
-      decision: "require_approval",
-      severity: "medium",
-      ruleId: "exec.delete.medium.lab-subdir",
-      reason: "recursive deletion of lab subdirectory"
-    };
-  }
-
-  if (/^rm\s+-rf\s+guardrail-lab\/?$/.test(cmd)) {
-    return {
-      decision: "block",
-      severity: "high",
-      ruleId: "exec.delete.high.lab-root",
-      reason: "recursive deletion of lab root"
-    };
-  }
-
-  if (
-    /^rm\s+-rf\s+\/($|\s)/.test(cmd) ||
-    /\bshutdown\b/.test(cmd) ||
-    /\breboot\b/.test(cmd) ||
-    /\bmkfs\b/.test(cmd) ||
-    /\bdd\s+if=/.test(cmd) ||
-    /\bchmod\s+-R\b/.test(cmd) ||
-    /\bchown\s+-R\b/.test(cmd) ||
-    /\bkillall\b/.test(cmd)
-  ) {
-    return {
-      decision: "block",
-      severity: "critical",
-      ruleId: "exec.destructive.critical",
-      reason: "critical destructive pattern"
-    };
+  for (const key of ["mode", "logFile", "workspaceRoot", "escalateFallback"]) {
+    const value =
+      getConfigViaGetter(api?.config, key) ??
+      getConfigViaGetter(api?.pluginConfig, key);
+    if (value !== undefined) {
+      merged[key] = value;
+    }
   }
 
   return {
-    decision: "allow",
-    severity: "unknown",
-    ruleId: "exec.default.allow",
-    reason: "no matching risky pattern"
+    mode: merged.mode === "observe" ? "observe" : "enforce",
+    workspaceRoot: merged.workspaceRoot || "/home/node/.openclaw/workspace",
+    logFile: merged.logFile || "/home/node/.openclaw/guardrail-enforce.log",
+    escalateFallback:
+      merged.escalateFallback === "approval" || merged.escalateFallback === "allow"
+        ? merged.escalateFallback
+        : "block"
   };
+}
+
+function coerceParams(rawParams) {
+  if (!rawParams) {
+    return {};
+  }
+
+  if (typeof rawParams === "string") {
+    try {
+      const parsed = JSON.parse(rawParams);
+      return parsed && typeof parsed === "object" ? parsed : { command: rawParams };
+    } catch {
+      return { command: rawParams };
+    }
+  }
+
+  if (typeof rawParams === "object") {
+    return rawParams;
+  }
+
+  return {};
+}
+
+function extractToolName(evt) {
+  return (
+    evt?.toolName ??
+    evt?.tool?.name ??
+    evt?.name ??
+    evt?.toolCall?.name ??
+    evt?.toolCall?.toolName ??
+    null
+  );
+}
+
+function extractParams(evt) {
+  return coerceParams(
+    evt?.params ??
+      evt?.arguments ??
+      evt?.toolInput ??
+      evt?.toolCall?.arguments ??
+      evt?.toolCall?.params ??
+      null
+  );
+}
+
+function describeHookResult(verdict, hookResult, mode, runtimeConfig) {
+  if (mode === "observe") {
+    return "observe_only";
+  }
+
+  if (verdict?.decision === Decisions.ESCALATE_LLM) {
+    return `escalate_fallback_${runtimeConfig.escalateFallback}`;
+  }
+
+  if (hookResult?.block) {
+    return "block";
+  }
+
+  if (hookResult?.requireApproval) {
+    return "require_approval";
+  }
+
+  return "allow";
 }
 
 export default {
@@ -97,19 +139,45 @@ export default {
   description: "Enforce-mode exec guardrail for BA experiments",
   configSchema: {
     type: "object",
-    additionalProperties: false,
-    properties: {}
+    additionalProperties: true,
+    properties: {
+      mode: {
+        type: "string",
+        enum: ["observe", "enforce"],
+        default: "enforce"
+      },
+      workspaceRoot: {
+        type: "string",
+        default: "/home/node/.openclaw/workspace"
+      },
+      logFile: {
+        type: "string",
+        default: "/home/node/.openclaw/guardrail-enforce.log"
+      },
+      escalateFallback: {
+        type: "string",
+        enum: ["block", "approval", "allow"],
+        default: "block"
+      }
+    }
   },
 
   register(api) {
-    append({
+    const runtimeConfig = resolveRuntimeConfig(api);
+    const logger = createLogger({ logFile: runtimeConfig.logFile });
+
+    logger.append({
       event: "plugin_loaded",
-      mode: "enforce",
+      pluginId: "guardrail-spike",
+      pluginName: "Guardrail Spike",
+      version: "0.1.0",
+      mode: runtimeConfig.mode,
+      workspaceRoot: runtimeConfig.workspaceRoot,
       apiMethods: keysOf(api)
     });
 
     if (typeof api?.on !== "function") {
-      append({
+      logger.append({
         event: "fatal",
         message: "api.on unavailable",
         apiMethods: keysOf(api)
@@ -118,67 +186,95 @@ export default {
     }
 
     api.on("before_tool_call", async (evt) => {
-      const toolName =
-        evt?.toolName ??
-        evt?.tool?.name ??
-        evt?.name ??
-        evt?.toolCall?.name ??
-        null;
-
-      const params = safe(
-        evt?.params ??
-        evt?.arguments ??
-        evt?.toolInput ??
-        evt?.toolCall?.arguments ??
-        null
-      );
+      const toolName = extractToolName(evt);
+      const params = extractParams(evt);
 
       if (toolName !== "exec") {
-        append({
+        logger.append({
           event: "before_tool_call",
-          mode: "enforce",
+          mode: runtimeConfig.mode,
           toolName,
           decision: "ignore_non_exec",
           runId: evt?.runId ?? null,
-          toolCallId: evt?.toolCallId ?? null
+          toolCallId: evt?.toolCallId ?? null,
+          hookResultType: "ignore_non_exec"
         });
         return;
       }
 
       const command = params?.command ?? "";
-      const workdir = params?.workdir ?? "";
-      const verdict = classifyExec(command);
+      const workdir = params?.workdir ?? params?.cwd ?? runtimeConfig.workspaceRoot;
+      let verdict;
+      let hookResult;
+      let hookResultType;
 
-      append({
+      try {
+        verdict = evaluateExecPolicy({
+          command,
+          workdir,
+          workspaceRoot: runtimeConfig.workspaceRoot,
+          config: runtimeConfig
+        });
+        hookResult =
+          runtimeConfig.mode === "observe"
+            ? undefined
+            : toOpenClawHookResult(verdict, runtimeConfig);
+        hookResultType = describeHookResult(
+          verdict,
+          hookResult,
+          runtimeConfig.mode,
+          runtimeConfig
+        );
+      } catch (error) {
+        verdict = {
+          decision: Decisions.BLOCK,
+          layer: "deterministic",
+          ruleId: "exec.guardrail.internal_error",
+          severity: "critical",
+          reason: "internal guardrail error"
+        };
+        hookResult = runtimeConfig.mode === "observe" ? undefined : { block: true };
+        hookResultType =
+          runtimeConfig.mode === "observe" ? "observe_fail_closed" : "fail_closed_block";
+
+        logger.append({
+          event: "before_tool_call_error",
+          mode: runtimeConfig.mode,
+          runId: evt?.runId ?? null,
+          toolCallId: evt?.toolCallId ?? null,
+          toolName,
+          rawCommand: command,
+          workdir,
+          error: safeJson(error),
+          hookResultType
+        });
+      }
+
+      logger.append({
         event: "before_tool_call",
-        mode: "enforce",
-        toolName,
+        mode: runtimeConfig.mode,
         runId: evt?.runId ?? null,
         toolCallId: evt?.toolCallId ?? null,
-        command,
+        toolName,
+        rawCommand: command,
         workdir,
         decision: verdict.decision,
-        severity: verdict.severity,
         ruleId: verdict.ruleId,
+        severity: verdict.severity,
         reason: verdict.reason,
+        layer: verdict.layer,
+        normalized: verdict.normalized ?? null,
+        hookResultType,
         rawKeys: keysOf(evt)
       });
 
-      if (verdict.decision === "block") {
-        return { block: true };
-      }
-
-      if (verdict.decision === "require_approval") {
-        return { requireApproval: true };
-      }
-
-      return;
+      return hookResult;
     });
 
     api.on("tool_result_persist", (evt) => {
-      append({
+      logger.append({
         event: "tool_result_persist",
-        mode: "enforce",
+        mode: runtimeConfig.mode,
         toolName:
           evt?.toolName ??
           evt?.tool?.name ??

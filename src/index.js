@@ -284,5 +284,36 @@ export default {
         keys: keysOf(evt)
       });
     });
+
+    api.on("before_agent_run", async (evt, ctx) => {
+      logger.append({
+        event: "debug_before_agent_run",
+        mode: runtimeConfig.mode,
+        keys: evt && typeof evt === "object" ? Object.keys(evt).sort() : [],
+        ctxKeys: ctx && typeof ctx === "object" ? Object.keys(ctx).sort() : [],
+        runId: evt?.runId ?? ctx?.runId ?? null,
+        sessionKey: evt?.sessionKey ?? ctx?.sessionKey ?? null
+      });
+    });
+
+    api.on("model_call_started", async (evt, ctx) => {
+      logger.append({
+        event: "debug_model_call_started",
+        mode: runtimeConfig.mode,
+        keys: evt && typeof evt === "object" ? Object.keys(evt).sort() : [],
+        provider: evt?.provider ?? null,
+        model: evt?.model ?? null,
+        runId: evt?.runId ?? ctx?.runId ?? null
+      });
+    });
+
+    api.on("agent_end", async (evt, ctx) => {
+      logger.append({
+        event: "debug_agent_end",
+        mode: runtimeConfig.mode,
+        keys: evt && typeof evt === "object" ? Object.keys(evt).sort() : [],
+        runId: evt?.runId ?? ctx?.runId ?? null
+      });
+    });
   }
 };

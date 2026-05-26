@@ -1,5 +1,6 @@
 import { toOpenClawHookResult } from "./approval.js";
 import { Decisions } from "./decisions.js";
+import { evaluateWithJudge } from "./judge.js";
 import { createLogger, safeJson } from "./logger.js";
 import { evaluateExecPolicy } from "./policy.js";
 
@@ -44,13 +45,47 @@ function getConfigViaGetter(candidate, key) {
   }
 }
 
+function coerceBoolean(value, defaultValue) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    if (value.toLowerCase() === "true") {
+      return true;
+    }
+    if (value.toLowerCase() === "false") {
+      return false;
+    }
+  }
+
+  return defaultValue;
+}
+
+function coercePositiveNumber(value, defaultValue) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : defaultValue;
+}
+
 function resolveRuntimeConfig(api) {
   const merged = {
     ...readConfigObject(api?.config),
     ...readConfigObject(api?.pluginConfig)
   };
 
-  for (const key of ["mode", "logFile", "workspaceRoot", "escalateFallback"]) {
+  for (const key of [
+    "mode",
+    "logFile",
+    "workspaceRoot",
+    "escalateFallback",
+    "judge",
+    "judgeEnabled",
+    "judgeModel",
+    "judgeBaseUrl",
+    "judgeTimeoutMs",
+    "judgeFallbackDecision",
+    "judgeMinConfidence"
+  ]) {
     const value =
       getConfigViaGetter(api?.config, key) ??
       getConfigViaGetter(api?.pluginConfig, key);
@@ -59,6 +94,14 @@ function resolveRuntimeConfig(api) {
     }
   }
 
+  const judgeConfig = readConfigObject(merged.judge);
+  const judgeFallbackDecision =
+    merged.judgeFallbackDecision ??
+    judgeConfig.fallbackDecision;
+  const judgeMinConfidence =
+    merged.judgeMinConfidence ??
+    judgeConfig.minConfidence;
+
   return {
     mode: merged.mode === "observe" ? "observe" : "enforce",
     workspaceRoot: merged.workspaceRoot || "/home/node/.openclaw/workspace",
@@ -66,7 +109,32 @@ function resolveRuntimeConfig(api) {
     escalateFallback:
       merged.escalateFallback === "approval" || merged.escalateFallback === "allow"
         ? merged.escalateFallback
-        : "block"
+        : "block",
+    judge: {
+      enabled: coerceBoolean(
+        merged.judgeEnabled ?? judgeConfig.enabled,
+        false
+      ),
+      model:
+        merged.judgeModel ??
+        judgeConfig.model ??
+        "devstral-small-2:latest",
+      baseUrl:
+        merged.judgeBaseUrl ??
+        judgeConfig.baseUrl ??
+        "http://ollama:11434",
+      timeoutMs: coercePositiveNumber(
+        merged.judgeTimeoutMs ?? judgeConfig.timeoutMs,
+        30000
+      ),
+      fallbackDecision:
+        judgeFallbackDecision === Decisions.REQUIRE_APPROVAL
+          ? Decisions.REQUIRE_APPROVAL
+          : Decisions.BLOCK,
+      minConfidence: ["low", "medium", "high"].includes(judgeMinConfidence)
+        ? judgeMinConfidence
+        : "medium"
+    }
   };
 }
 
@@ -158,6 +226,38 @@ export default {
         type: "string",
         enum: ["block", "approval", "allow"],
         default: "block"
+      },
+      judge: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          enabled: {
+            type: "boolean",
+            default: false
+          },
+          model: {
+            type: "string",
+            default: "devstral-small-2:latest"
+          },
+          baseUrl: {
+            type: "string",
+            default: "http://ollama:11434"
+          },
+          timeoutMs: {
+            type: "number",
+            default: 30000
+          },
+          fallbackDecision: {
+            type: "string",
+            enum: ["block", "require_approval"],
+            default: "block"
+          },
+          minConfidence: {
+            type: "string",
+            enum: ["low", "medium", "high"],
+            default: "medium"
+          }
+        }
       }
     }
   },
@@ -204,17 +304,42 @@ export default {
 
       const command = params?.command ?? "";
       const workdir = params?.workdir ?? params?.cwd ?? runtimeConfig.workspaceRoot;
+      let deterministicVerdict;
       let verdict;
       let hookResult;
       let hookResultType;
+      let judgeInvoked = false;
 
       try {
-        verdict = evaluateExecPolicy({
+        deterministicVerdict = evaluateExecPolicy({
           command,
           workdir,
           workspaceRoot: runtimeConfig.workspaceRoot,
           config: runtimeConfig
         });
+
+        verdict = deterministicVerdict;
+
+        if (
+          verdict.decision === Decisions.ESCALATE_LLM &&
+          runtimeConfig.judge.enabled
+        ) {
+          judgeInvoked = true;
+          verdict = await evaluateWithJudge(
+            {
+              command,
+              workdir,
+              normalized: deterministicVerdict.normalized,
+              deterministicVerdict,
+              policyContext: {
+                workspaceRoot: runtimeConfig.workspaceRoot,
+                mode: runtimeConfig.mode
+              }
+            },
+            runtimeConfig.judge
+          );
+        }
+
         hookResult =
           runtimeConfig.mode === "observe"
             ? undefined
@@ -259,11 +384,18 @@ export default {
         rawCommand: command,
         workdir,
         decision: verdict.decision,
+        finalDecision: verdict.decision,
+        deterministicDecision: deterministicVerdict?.decision ?? null,
         ruleId: verdict.ruleId,
         severity: verdict.severity,
         reason: verdict.reason,
         layer: verdict.layer,
         normalized: verdict.normalized ?? null,
+        judgeInvoked,
+        judgeModel: judgeInvoked ? runtimeConfig.judge.model : null,
+        judgeDecision: verdict.judgeDecision ?? null,
+        judgeConfidence: verdict.judgeConfidence ?? null,
+        judgeDurationMs: verdict.judgeDurationMs ?? null,
         hookResultType,
         rawKeys: keysOf(evt)
       });

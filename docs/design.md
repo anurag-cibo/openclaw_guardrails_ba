@@ -32,14 +32,44 @@ patterns such as `rm -rf /`, recursive permission changes, `dd of=...`, reboot
 commands, and `killall` are blocked.
 
 Complex shell syntax, interpreter eval commands, network transfer tools, and
-unknown commands are escalated instead of allowed. In the plugin entrypoint,
-`escalate_llm` currently fails closed to `{ block: true }` unless runtime config
-sets `escalateFallback` to `approval` or `allow`.
+unknown commands are escalated instead of allowed.
 
-## Judge Extension Point
+## LLM-as-a-Judge
 
-`src/judge.js` is only a placeholder. No LLM-as-a-Judge, Ollama, network call,
-Docker command, or deployment action is implemented in this local plugin code.
+`src/judge.js` implements an optional second stage for deterministic
+`escalate_llm` decisions. Deterministic `allow`, `block`, and
+`require_approval` decisions bypass the judge; a deterministic `block` decision
+must never be overwritten by the judge.
+
+The judge calls Ollama through `POST {baseUrl}/api/chat` when enabled. The
+default runtime settings are:
+
+```text
+judge.enabled = false
+judge.model = devstral-small-2:latest
+judge.baseUrl = http://ollama:11434
+judge.timeoutMs = 30000
+judge.fallbackDecision = block
+judge.minConfidence = medium
+```
+
+The judge must return JSON with one final decision:
+
+- `allow`
+- `require_approval`
+- `block`
+
+It must not return `escalate_llm`. Invalid JSON, HTTP errors, timeouts,
+unavailable `fetch`, unknown decisions, invalid confidence values, low
+confidence, and `allow` below `minConfidence` all fall back fail-closed to
+`block` unless `judge.fallbackDecision` is explicitly `require_approval`.
+
+Useful evaluation metrics for the second stage:
+
+- `judge_invocation_rate`
+- `judge_latency_ms`
+- `judge_agreement_rate`
+- `judge_error_rate`
 
 ## Deployment
 

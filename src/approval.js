@@ -4,6 +4,13 @@ const DEFAULT_PLUGIN_ID = "guardrail-spike";
 const DEFAULT_APPROVAL_TIMEOUT_MS = 60000;
 const DEFAULT_ALLOWED_DECISIONS = ["allow-once", "deny"];
 
+export const EnforcementActions = Object.freeze({
+  OBSERVE_ALLOW: "observe_allow",
+  ALLOW: "allow",
+  BLOCK: "block",
+  REQUEST_APPROVAL: "request_approval"
+});
+
 function mapApprovalSeverity(severity) {
   const normalizedSeverity = String(severity ?? "").toLowerCase();
 
@@ -62,9 +69,8 @@ function buildApprovalDescription(verdict) {
   return parts.join("\n");
 }
 
-function buildRequireApprovalResult(verdict) {
-  return {
-    requireApproval: {
+function buildRequireApprovalResult(verdict, approvalContext = {}) {
+  const requireApproval = {
       title: "Guardrail approval required",
       description: buildApprovalDescription(verdict),
       severity: mapApprovalSeverity(verdict?.severity),
@@ -72,34 +78,70 @@ function buildRequireApprovalResult(verdict) {
       timeoutBehavior: "deny",
       allowedDecisions: DEFAULT_ALLOWED_DECISIONS,
       pluginId: DEFAULT_PLUGIN_ID
-    }
   };
+
+  if (typeof approvalContext.onResolution === "function") {
+    requireApproval.onResolution = approvalContext.onResolution;
+  }
+
+  return { requireApproval };
 }
 
-export function toOpenClawHookResult(verdict, runtimeConfig = {}) {
+function isHitlEnabled(runtimeConfig) {
+  return runtimeConfig?.hitl?.enabled === true;
+}
+
+export function resolveEnforcementAction(verdict, runtimeConfig = {}) {
+  if (runtimeConfig.mode === "observe") {
+    return EnforcementActions.OBSERVE_ALLOW;
+  }
+
   if (!verdict || verdict.decision === Decisions.ALLOW) {
-    return undefined;
+    return EnforcementActions.ALLOW;
   }
 
   if (verdict.decision === Decisions.BLOCK) {
-    return { block: true };
+    return EnforcementActions.BLOCK;
   }
 
   if (verdict.decision === Decisions.REQUIRE_APPROVAL) {
-    return buildRequireApprovalResult(verdict);
+    return isHitlEnabled(runtimeConfig)
+      ? EnforcementActions.REQUEST_APPROVAL
+      : EnforcementActions.BLOCK;
   }
 
   if (verdict.decision === Decisions.ESCALATE_LLM) {
-    if (runtimeConfig.escalateFallback === "approval") {
-      return buildRequireApprovalResult(verdict);
+    if (
+      runtimeConfig.escalateFallback === "approval" &&
+      isHitlEnabled(runtimeConfig)
+    ) {
+      return EnforcementActions.REQUEST_APPROVAL;
     }
 
     if (runtimeConfig.escalateFallback === "allow") {
-      return undefined;
+      return EnforcementActions.ALLOW;
     }
 
+    return EnforcementActions.BLOCK;
+  }
+
+  return EnforcementActions.BLOCK;
+}
+
+export function toOpenClawHookResult(
+  verdict,
+  runtimeConfig = {},
+  approvalContext = {}
+) {
+  const enforcementAction = resolveEnforcementAction(verdict, runtimeConfig);
+
+  if (enforcementAction === EnforcementActions.BLOCK) {
     return { block: true };
   }
 
-  return { block: true };
+  if (enforcementAction === EnforcementActions.REQUEST_APPROVAL) {
+    return buildRequireApprovalResult(verdict, approvalContext);
+  }
+
+  return undefined;
 }

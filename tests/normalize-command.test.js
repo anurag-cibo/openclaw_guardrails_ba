@@ -78,6 +78,13 @@ test("detects complex shell operators", () => {
   assert.equal(normalized.complexShell, true);
 });
 
+test("detects a single background operator as complex shell syntax", () => {
+  const normalized = normalize("pwd & rm -rf guardrail-lab");
+
+  assert.equal(normalized.complexShell, true);
+  assert.match(normalized.parseWarnings.join("\n"), /operator detected: &/);
+});
+
 test("detects interpreter eval commands", () => {
   const normalized = normalize(
     "python -c 'import shutil; shutil.rmtree(\"guardrail-lab\")'"
@@ -169,4 +176,28 @@ test("normalizes workspace root via dot target", () => {
 
   assert.equal(normalized.operation, "recursive_delete");
   assert.equal(normalized.targetInfos[0].isWorkspaceRoot, true);
+});
+
+test("marks a workspace symlink resolving outside as an escape", () => {
+  const target = `${workspaceRoot}/external-link/passwd`;
+  const realpaths = new Map([
+    [workspaceRoot, workspaceRoot],
+    [target, "/etc/passwd"]
+  ]);
+  const normalized = normalizeExecCommand({
+    command: "cat external-link/passwd",
+    workdir,
+    workspaceRoot,
+    realpathResolver(candidate) {
+      if (!realpaths.has(candidate)) {
+        throw new Error("ENOENT");
+      }
+      return realpaths.get(candidate);
+    }
+  });
+
+  assert.equal(normalized.symlinkResolutionActive, true);
+  assert.equal(normalized.targetInfos[0].symlinkResolved, true);
+  assert.equal(normalized.targetInfos[0].resolvedCanonical, "/etc/passwd");
+  assert.equal(normalized.targetInfos[0].isOutsideWorkspace, true);
 });

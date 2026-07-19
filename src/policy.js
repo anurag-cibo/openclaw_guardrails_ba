@@ -1,4 +1,5 @@
 import { performance } from "node:perf_hooks";
+import path from "node:path";
 import {
   allow,
   block,
@@ -11,6 +12,20 @@ const READ_FILE_PROGRAMS = new Set(["cat", "head", "tail"]);
 const CRITICAL_PROGRAMS = new Set(["shutdown", "reboot", "mkfs", "killall"]);
 const NETWORK_PROGRAMS = new Set(["curl", "wget", "scp", "rsync", "nc"]);
 const INTERPRETERS = new Set(["python", "python3", "node", "bash", "sh"]);
+const ALLOWED_GIT_SUBCOMMANDS = new Set(["status", "diff", "log"]);
+const UNSAFE_GIT_FLAGS = [
+  "--no-index",
+  "--ext-diff",
+  "--textconv",
+  "--output"
+];
+const SENSITIVE_EXACT_BASENAMES = new Set([
+  ".netrc",
+  "id_rsa",
+  "id_dsa",
+  "id_ecdsa",
+  "id_ed25519"
+]);
 
 function targetCanonicals(normalized) {
   return normalized.targetCanonicals ?? [];
@@ -41,13 +56,105 @@ function hasAmbiguousShellInput(normalized) {
   return normalized.complexShell || normalized.hasUnsafeExpansion;
 }
 
-function isAllowedGitCommand(normalized) {
+function basenameOfTarget(target) {
+  return path.posix.basename(
+    target.effectiveCanonical ?? target.resolvedCanonical ?? target.canonical
+  ).toLowerCase();
+}
+
+function isSensitiveBasename(basename) {
+  return (
+    basename === ".env" ||
+    basename.startsWith(".env.") ||
+    basename.endsWith(".env") ||
+    basename.endsWith(".pem") ||
+    basename.endsWith(".key") ||
+    basename.startsWith("credentials") ||
+    SENSITIVE_EXACT_BASENAMES.has(basename)
+  );
+}
+
+function readsFileContents(normalized) {
+  return (
+    READ_FILE_PROGRAMS.has(normalized.programBase) ||
+    normalized.programBase === "grep"
+  );
+}
+
+function hasSensitiveWorkspaceRead(normalized) {
+  return (
+    readsFileContents(normalized) &&
+    !hasAmbiguousShellInput(normalized) &&
+    hasAnyTarget(
+      normalized,
+      (target) => target.isInsideWorkspace && isSensitiveBasename(basenameOfTarget(target))
+    )
+  );
+}
+
+function hasSymlinkEscape(normalized) {
+  return hasAnyTarget(
+    normalized,
+    (target) => target.symlinkResolved && target.isOutsideWorkspace
+  );
+}
+
+function hasUnsafeGitFlag(normalized) {
+  return normalized.flags.raw.some((flag) =>
+    UNSAFE_GIT_FLAGS.some(
+      (unsafe) => flag === unsafe || flag.startsWith(`${unsafe}=`)
+    )
+  );
+}
+
+function gitDecision(normalized) {
   if (normalized.programBase !== "git") {
-    return false;
+    return null;
   }
 
   const subcommand = normalized.argv[1];
-  return subcommand === "status" || subcommand === "diff" || subcommand === "log";
+  if (!ALLOWED_GIT_SUBCOMMANDS.has(subcommand)) {
+    return null;
+  }
+
+  if (hasUnsafeGitFlag(normalized)) {
+    return escalateLlm(
+      "exec.git.unsafe_arguments",
+      "git arguments can read arbitrary paths, execute helpers, or write output",
+      {
+        riskCategory: "git_unsafe_arguments",
+        severity: "high"
+      }
+    );
+  }
+
+  if (!allTargetsInsideWorkspaceOrNoTargets(normalized)) {
+    return escalateLlm(
+      "exec.git.outside_workspace",
+      "git command references a target outside the workspace",
+      {
+        riskCategory: "outside_workspace_read",
+        severity: "high"
+      }
+    );
+  }
+
+  if (
+    hasAnyTarget(
+      normalized,
+      (target) => target.isInsideWorkspace && isSensitiveBasename(basenameOfTarget(target))
+    )
+  ) {
+    return block("exec.read.sensitive_file", "read of sensitive workspace file", {
+      riskCategory: "sensitive_read",
+      severity: "high"
+    });
+  }
+
+  return allow("exec.safe.git_readonly", "known readonly git command", {
+    riskCategory: "readonly",
+    severity: "low"
+  });
 }
 
 function isAllowedReadonlyCommand(normalized) {
@@ -65,10 +172,6 @@ function isAllowedReadonlyCommand(normalized) {
 
   if (normalized.programBase === "grep") {
     return allTargetsInsideWorkspaceOrNoTargets(normalized);
-  }
-
-  if (isAllowedGitCommand(normalized)) {
-    return true;
   }
 
   if (normalized.programBase === "find" && normalized.operation === "find") {
@@ -222,7 +325,10 @@ function evaluateNormalized(normalized) {
     return mutatingFindDecision(normalized);
   }
 
-  if (CRITICAL_PROGRAMS.has(normalized.programBase)) {
+  if (
+    CRITICAL_PROGRAMS.has(normalized.programBase) ||
+    normalized.programBase.startsWith("mkfs.")
+  ) {
     return block("exec.destructive.critical_program", "critical destructive program", {
       riskCategory: "critical_program",
       severity: "critical"
@@ -250,6 +356,24 @@ function evaluateNormalized(normalized) {
     });
   }
 
+  if (hasSymlinkEscape(normalized)) {
+    return block(
+      "exec.path.symlink_escape",
+      "path resolves through a symbolic link outside the workspace",
+      {
+        riskCategory: "symlink_escape",
+        severity: "high"
+      }
+    );
+  }
+
+  if (hasSensitiveWorkspaceRead(normalized)) {
+    return block("exec.read.sensitive_file", "read of sensitive workspace file", {
+      riskCategory: "sensitive_read",
+      severity: "high"
+    });
+  }
+
   if (hasAmbiguousShellInput(normalized)) {
     return escalateLlm(
       "exec.shell.ambiguous",
@@ -273,6 +397,11 @@ function evaluateNormalized(normalized) {
         severity: "medium"
       }
     );
+  }
+
+  const resolvedGitDecision = gitDecision(normalized);
+  if (resolvedGitDecision) {
+    return resolvedGitDecision;
   }
 
   if (
@@ -313,7 +442,9 @@ export function evaluateExecPolicy({ command, workdir, workspaceRoot, config = {
     workdir,
     workspaceRoot,
     protectedTargets: config.protectedTargets,
-    approvalTargets: config.approvalTargets
+    approvalTargets: config.approvalTargets,
+    resolveSymlinks: config.resolveSymlinks,
+    realpathResolver: config.realpathResolver
   });
   const verdict = evaluateNormalized(normalized);
 

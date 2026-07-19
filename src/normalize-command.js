@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 
 const posix = path.posix;
@@ -141,10 +142,14 @@ function tokenizeShellLikeDetailed(command) {
       continue;
     }
 
-    if (char === "&" && next === "&") {
+    if (char === "&") {
       pushCurrent();
-      markComplex("&&");
-      index += 1;
+      if (next === "&") {
+        markComplex("&&");
+        index += 1;
+      } else {
+        markComplex("&");
+      }
       continue;
     }
 
@@ -249,27 +254,91 @@ function normalizePolicyTargets(targets, workspaceRootCanonical, defaults) {
     .map((target) => normalizeAbsolutePath(target.trim(), workspaceRootCanonical));
 }
 
+function defaultRealpathResolver(candidate) {
+  return fs.realpathSync.native(candidate);
+}
+
+function safeRealpath(candidate, realpathResolver) {
+  if (typeof realpathResolver !== "function") {
+    return null;
+  }
+
+  try {
+    const resolved = realpathResolver(candidate);
+    return typeof resolved === "string" && resolved.length > 0
+      ? normalizeAbsolutePath(resolved, "/")
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveThroughExistingAncestor(candidate, realpathResolver) {
+  const direct = safeRealpath(candidate, realpathResolver);
+  if (direct) {
+    return direct;
+  }
+
+  const suffix = [];
+  let current = candidate;
+
+  while (current !== "/") {
+    suffix.unshift(posix.basename(current));
+    current = posix.dirname(current);
+    const resolvedAncestor = safeRealpath(current, realpathResolver);
+
+    if (resolvedAncestor) {
+      return normalizeAbsolutePath(posix.join(resolvedAncestor, ...suffix), "/");
+    }
+  }
+
+  return null;
+}
+
 function makeTargetInfo(
   rawTarget,
   workdirCanonical,
   workspaceRootCanonical,
+  workspaceRootResolved,
   protectedTargetCanonicals,
-  approvalTargetCanonicals
+  approvalTargetCanonicals,
+  realpathResolver
 ) {
   const raw = String(rawTarget ?? "");
   const canonical = normalizeAbsolutePath(raw, workdirCanonical);
-  const isWorkspaceRoot = canonical === workspaceRootCanonical;
-  const isInsideWorkspace = isPathInside(canonical, workspaceRootCanonical);
+  const resolvedCanonical = resolveThroughExistingAncestor(
+    canonical,
+    realpathResolver
+  );
+  const effectiveCanonical = resolvedCanonical ?? canonical;
+  const isWorkspaceRoot =
+    canonical === workspaceRootCanonical ||
+    effectiveCanonical === workspaceRootResolved;
+  const isInsideWorkspace =
+    isPathInside(canonical, workspaceRootCanonical) &&
+    isPathInside(effectiveCanonical, workspaceRootResolved);
   const isOutsideWorkspace = !isInsideWorkspace;
   const matchingProtectedTarget =
-    protectedTargetCanonicals.find((target) => target === canonical) ?? null;
+    protectedTargetCanonicals.find(
+      (target) => target === canonical || target === effectiveCanonical
+    ) ?? null;
   const matchingApprovalTarget =
-    approvalTargetCanonicals.find((target) => target === canonical) ?? null;
+    approvalTargetCanonicals.find(
+      (target) => target === canonical || target === effectiveCanonical
+    ) ?? null;
   const containingProtectedTarget =
-    protectedTargetCanonicals.find((target) => isPathDescendant(canonical, target)) ??
+    protectedTargetCanonicals.find(
+      (target) =>
+        isPathDescendant(canonical, target) ||
+        isPathDescendant(effectiveCanonical, target)
+    ) ??
     null;
   const containingApprovalTarget =
-    approvalTargetCanonicals.find((target) => isPathDescendant(canonical, target)) ??
+    approvalTargetCanonicals.find(
+      (target) =>
+        isPathDescendant(canonical, target) ||
+        isPathDescendant(effectiveCanonical, target)
+    ) ??
     null;
 
   let scope = "outside_workspace";
@@ -282,6 +351,10 @@ function makeTargetInfo(
   return {
     raw,
     canonical,
+    resolvedCanonical,
+    effectiveCanonical,
+    symlinkResolved:
+      resolvedCanonical !== null && resolvedCanonical !== canonical,
     scope,
     isAbsolute: raw.startsWith("/"),
     isWorkspaceRoot,
@@ -296,7 +369,7 @@ function makeTargetInfo(
     containingProtectedTarget,
     matchingApprovalTarget,
     containingApprovalTarget,
-    isFilesystemRoot: canonical === "/",
+    isFilesystemRoot: canonical === "/" || effectiveCanonical === "/",
     isRootGlob: raw === "/*" || raw === "/**"
   };
 }
@@ -593,7 +666,9 @@ export function normalizeExecCommand({
   workdir,
   workspaceRoot,
   protectedTargets,
-  approvalTargets
+  approvalTargets,
+  resolveSymlinks = true,
+  realpathResolver
 }) {
   const rawCommand = String(command ?? "");
   const workspaceRootCanonical = normalizeAbsolutePath(
@@ -604,15 +679,32 @@ export function normalizeExecCommand({
     workdir || workspaceRootCanonical,
     workspaceRootCanonical
   );
+  const selectedRealpathResolver = resolveSymlinks
+    ? realpathResolver ?? defaultRealpathResolver
+    : null;
+  const resolvedWorkspaceRoot = safeRealpath(
+    workspaceRootCanonical,
+    selectedRealpathResolver
+  );
+  const workspaceRootResolved = resolvedWorkspaceRoot ?? workspaceRootCanonical;
+  const activeRealpathResolver = resolvedWorkspaceRoot
+    ? selectedRealpathResolver
+    : null;
   const protectedTargetCanonicals = normalizePolicyTargets(
     protectedTargets,
     workspaceRootCanonical,
     DEFAULT_PROTECTED_TARGETS
+  ).map(
+    (target) =>
+      resolveThroughExistingAncestor(target, activeRealpathResolver) ?? target
   );
   const approvalTargetCanonicals = normalizePolicyTargets(
     approvalTargets,
     workspaceRootCanonical,
     DEFAULT_APPROVAL_TARGETS
+  ).map(
+    (target) =>
+      resolveThroughExistingAncestor(target, activeRealpathResolver) ?? target
   );
   const tokenized = tokenizeShellLikeDetailed(rawCommand);
   const argv = tokenized.argv;
@@ -647,8 +739,10 @@ export function normalizeExecCommand({
       target,
       workdirCanonical,
       workspaceRootCanonical,
+      workspaceRootResolved,
       protectedTargetCanonicals,
-      approvalTargetCanonicals
+      approvalTargetCanonicals,
+      activeRealpathResolver
     )
   );
   const targetCanonicals = targetInfos.map((target) => target.canonical);
@@ -667,6 +761,8 @@ export function normalizeExecCommand({
     protectedTargets: protectedTargetCanonicals,
     approvalTargets: approvalTargetCanonicals,
     workspaceRoot: workspaceRootCanonical,
+    workspaceRootResolved,
+    symlinkResolutionActive: Boolean(activeRealpathResolver),
     workdir: workdirCanonical,
     complexShell: tokenized.complexShell,
     hasVariableExpansion: tokenized.hasVariableExpansion,

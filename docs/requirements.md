@@ -451,7 +451,9 @@ Eindeutig ungefährliche Read-only-Kommandos dürfen erlaubt werden, sofern ihr 
 **Akzeptanzkriterien:**
 
 - `pwd` wird erlaubt.
-- `git status`, `git diff`, `git log` werden erlaubt.
+- `git status`, `git diff`, `git log` werden nur mit kontrollierten Argumenten
+  erlaubt; `--no-index`, externe Diff-Helfer, Textconv und Output-Dateien werden
+  nicht deterministisch freigegeben.
 - `ls` wird nur erlaubt, wenn kein Ziel oder nur Ziele innerhalb `workspaceRoot` betroffen sind.
 - `cat`, `head`, `tail` werden nur erlaubt, wenn Ziele innerhalb `workspaceRoot` liegen.
 - `grep` wird nur erlaubt, wenn Suchziele innerhalb `workspaceRoot` liegen und keine offensichtlich riskanten Pfade betroffen sind.
@@ -571,6 +573,8 @@ Das Plugin muss einen Observe-Mode unterstützen.
 - Im Observe-Mode wird die Entscheidung geloggt.
 - Es wird kein blockierendes Hook-Ergebnis zurückgegeben.
 - Der tatsächliche Tool-Aufruf läuft weiter.
+- Der LLM-Judge wird im Observe-Mode nicht aufgerufen; C0 misst damit Verhalten
+  ohne semantische oder menschliche Durchsetzung.
 
 ---
 
@@ -581,20 +585,26 @@ Das Plugin muss einen Enforce-Mode unterstützen.
 **Akzeptanzkriterien:**
 
 - `block` wird als `{ block: true }` zurückgegeben.
-- `require_approval` wird als `{ requireApproval: true }` zurückgegeben, sofern Approval aktiv genutzt wird.
-- `escalate_llm` wird standardmäßig fail-closed behandelt, solange kein Judge implementiert ist.
+- `require_approval` wird bei `hitl.enabled=true` als strukturierte
+  `requireApproval`-Anfrage zurückgegeben.
+- `require_approval` wird bei `hitl.enabled=false` fail-closed auf `{ block: true }`
+  abgebildet; das Policy-Verdikt bleibt im Log erhalten.
+- `escalate_llm` wird standardmäßig fail-closed behandelt, wenn kein Judge aktiv ist.
 
 ---
 
-### FR-23: LLM-Judge-Erweiterungspunkt
+### FR-23: LLM-Judge
 
-Das Plugin muss eine spätere LLM-Judge-Stufe architektonisch vorbereiten.
+Das Plugin muss eine optionale LLM-Judge-Stufe für mehrdeutige Aufrufe anbieten.
 
 **Akzeptanzkriterien:**
 
 - Es existiert ein Modul `judge.js`.
 - Der deterministische Layer kann `escalate_llm` zurückgeben.
+- Nur `escalate_llm` aktiviert den Judge.
 - Der LLM-Judge darf deterministische `block`-Entscheidungen nicht überschreiben.
+- Judge-Fehler, Timeout und unzureichende Konfidenz fallen konfigurationsabhängig
+  auf `block` (C2) oder `require_approval` (C3) zurück.
 
 ---
 
@@ -615,13 +625,18 @@ JSONL-Einträge enthalten mindestens:
 - rawCommand,
 - workdir,
 - normalized command object,
-- decision,
+- deterministicDecision,
+- judgeDecision,
+- policyDecision (fachliches Endverdikt),
+- enforcementAction (tatsächliche technische Aktion),
 - ruleId,
 - severity,
 - reason,
 - layer,
 - hookResultType,
-- durationMs.
+- deterministicDurationMs,
+- judgeDurationMs,
+- guardrailDurationMs.
 
 ---
 
@@ -814,30 +829,35 @@ Positiv:
 - unknown default ist `escalate_llm`,
 - `escalate_llm` fällt standardmäßig auf block zurück,
 - Logging ist JSONL-basiert,
-- LLM-Judge ist vorbereitet, aber nicht aktiv.
+- LLM-Judge ist implementiert und konfigurierbar.
+- Approval wurde mit OpenClaw 2026.5.18 als strukturierter Plugin-Flow validiert.
+- `hitl.enabled` trennt Policy-Verdikt und tatsächliche Approval-Anfrage.
+- Request und tatsächliche Auflösung werden über `onResolution` korreliert
+  protokolliert; der E6-Responder speichert zusätzlich Gateway-ID,
+  vollständiges Requestobjekt und Resolve-Antwort.
 
 Offene Schwächen:
 
-- Policy ist noch zu stark auf `guardrail-lab` zugeschnitten.
-- Read-only-Allowlist ist zu großzügig für `ls` und `grep`.
-- Newlines, Variablen, Globs und Tilde müssen konservativer behandelt werden.
-- Geschützte Pfade sollten konfigurierbar werden.
-- Approval muss in OpenClaw v2026.4.26 noch isoliert getestet werden.
-- LLM-Judge ist noch nicht implementiert.
+- Sensitive Reads werden über Dateinamenmuster erkannt; semantisch sensible
+  Dateien mit unauffälligem Namen bleiben eine Grenze der Heuristik.
+- Symlink-Prüfung setzt voraus, dass der Workspace im auswertenden Prozess
+  sichtbar ist; ohne existierenden Workspace fällt die Offline-Normalisierung
+  auf die lexikalische Pfadklassifikation zurück.
+- Der Shell-Tokenizer ist bewusst konservativ, aber kein vollständiger
+  POSIX-Shell-Parser.
 
 ---
 
 ## 12. Offene Designentscheidungen
 
-### OD-01: Umgang mit `require_approval`
+### OD-01: Umgang mit `require_approval` (entschieden)
 
-Offen: Wird `requireApproval` in der aktuellen OpenClaw-Version zuverlässig nutzbar sein?
-
-Vorläufige Entscheidung:
+Der strukturierte Approval-Flow wurde mit OpenClaw 2026.5.18 validiert. Es gilt:
 
 ```text
 Semantisch bleibt require_approval Teil der Policy.
-Technisch darf es bis zur Validierung sicher auf block abgebildet werden.
+Technisch wird es nur bei hitl.enabled=true als Approval-Anfrage ausgegeben.
+Ohne aktive HITL-Schicht wird es sicher auf block abgebildet.
 ```
 
 ### OD-02: Policy für beliebige Workspace-Unterordner
@@ -851,16 +871,16 @@ recursive_delete auf nicht geschützten Workspace-Unterordner -> require_approva
 Falls Approval nicht stabil: block-soft oder escalate_llm mit fallback block.
 ```
 
-### OD-03: LLM-Judge
+### OD-03: LLM-Judge (architektonisch entschieden)
 
-Offen: Welches Modell wird als Judge verwendet?
-
-Vorläufige Entscheidung:
+Das konkrete Modell bleibt eine experimentelle Variable und wird pro Messreihe
+explizit fixiert. Die Schichtlogik ist entschieden:
 
 ```text
-LLM-Judge erst nach stabiler deterministischer Policy.
 Judge nur für escalate_llm.
 Deterministisches block darf nicht überschrieben werden.
+C2: Judge-Fallback block.
+C3: Judge-Fallback require_approval und Weitergabe an HITL.
 ```
 
 ---
@@ -960,7 +980,12 @@ Read-only-Kommandos werden nur innerhalb des Workspace-Scopes erlaubt:
 - `cat`, `head`, `tail`: erlaubt, wenn alle Dateiziele innerhalb
   `workspaceRoot` liegen.
 - `grep`: erlaubt, wenn alle Suchziele innerhalb `workspaceRoot` liegen.
-- `git status`, `git diff`, `git log`: erlaubt.
+- `git status`, `git diff`, `git log`: erlaubt, wenn das Subkommando direkt
+  angegeben ist, keine unsicheren Flags verwendet werden und alle Dateiziele im
+  Workspace liegen.
+- Workspace-lokale Reads auf `.env`, `*.env`, `*.pem`, `*.key`,
+  `credentials*`, `.netrc` und verbreitete SSH-Private-Key-Namen: `block`.
+- Pfade, die über einen Symlink aus dem Workspace heraus auflösen: `block`.
 
 Outside-Workspace-Reads wie `ls /`, `ls /etc`, `cat /etc/passwd` oder
 `grep -R foo /` duerfen nicht deterministisch erlaubt werden.
@@ -970,7 +995,7 @@ Outside-Workspace-Reads wie `ls /`, `ls /etc`, `cat /etc/passwd` oder
 Die Normalisierung markiert folgende Konstrukte als komplex oder unsicher:
 
 - Newlines ausserhalb von Quotes,
-- Shell-Operatoren wie `;`, `&&`, `||`, `|`, `>`, `>>`, `<`,
+- Shell-Operatoren wie `;`, `&`, `&&`, `||`, `|`, `>`, `>>`, `<`,
 - Command Substitution mit Backticks oder `$(...)`,
 - Variable Expansion mit `$VAR` oder `${VAR}`,
 - Tilde Expansion mit `~`,

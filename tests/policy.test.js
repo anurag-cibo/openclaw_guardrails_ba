@@ -62,6 +62,69 @@ test("blocks critical destructive commands", () => {
   assert.equal(evaluate("chmod -R 777 guardrail-lab").decision, Decisions.BLOCK);
   assert.equal(evaluate("chown -R node:node guardrail-lab").decision, Decisions.BLOCK);
   assert.equal(evaluate("killall node").decision, Decisions.BLOCK);
+  assert.equal(evaluate("mkfs.ext4 /dev/sda1").decision, Decisions.BLOCK);
+  assert.equal(evaluate("mkfs.xfs /dev/sdb1").decision, Decisions.BLOCK);
+});
+
+test("blocks sensitive reads inside the workspace", () => {
+  for (const command of [
+    "cat .env",
+    "cat guardrail-lab/secret.env",
+    "head credentials.json",
+    "tail guardrail-lab/server.key",
+    "grep token guardrail-lab/client.pem"
+  ]) {
+    const verdict = evaluate(command);
+
+    assert.equal(verdict.decision, Decisions.BLOCK, command);
+    assert.equal(verdict.ruleId, "exec.read.sensitive_file", command);
+  }
+});
+
+test("keeps expanded sensitive paths conservative instead of assuming a literal target", () => {
+  assert.equal(evaluate("cat ~/.ssh/id_rsa").decision, Decisions.ESCALATE_LLM);
+  assert.equal(evaluate("cat *.pem").decision, Decisions.ESCALATE_LLM);
+});
+
+test("validates git subcommands and arguments before readonly allow", () => {
+  assert.equal(evaluate("git status").decision, Decisions.ALLOW);
+  assert.equal(evaluate("git diff").decision, Decisions.ALLOW);
+  assert.equal(evaluate("git log --oneline").decision, Decisions.ALLOW);
+
+  for (const command of [
+    "git diff --no-index /etc/passwd guardrail-lab/README.txt",
+    "git diff --ext-diff",
+    "git diff --output=/tmp/diff.txt",
+    "git -C /tmp status"
+  ]) {
+    assert.equal(evaluate(command).decision, Decisions.ESCALATE_LLM, command);
+  }
+
+  assert.equal(evaluate("git diff -- .env").decision, Decisions.BLOCK);
+});
+
+test("blocks a read that resolves through a workspace symlink to outside", () => {
+  const target = `${workspaceRoot}/external-link/passwd`;
+  const realpaths = new Map([
+    [workspaceRoot, workspaceRoot],
+    [target, "/etc/passwd"]
+  ]);
+  const verdict = evaluateExecPolicy({
+    command: "cat external-link/passwd",
+    workdir,
+    workspaceRoot,
+    config: {
+      realpathResolver(candidate) {
+        if (!realpaths.has(candidate)) {
+          throw new Error("ENOENT");
+        }
+        return realpaths.get(candidate);
+      }
+    }
+  });
+
+  assert.equal(verdict.decision, Decisions.BLOCK);
+  assert.equal(verdict.ruleId, "exec.path.symlink_escape");
 });
 
 test("escalates interpreter eval and network transfer commands", () => {
@@ -160,6 +223,10 @@ test("does not allow shell command separator bypasses", () => {
   const verdict = evaluate("pwd\nrm -rf guardrail-lab");
 
   assert.notEqual(verdict.decision, Decisions.ALLOW);
+  assert.equal(
+    evaluate("pwd & rm -rf guardrail-lab").decision,
+    Decisions.ESCALATE_LLM
+  );
 });
 
 test("does not allow variable or tilde based rm targets", () => {

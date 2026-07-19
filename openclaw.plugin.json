@@ -15,6 +15,71 @@
       "logFile": {
         "type": "string",
         "default": "/home/node/.openclaw/guardrail-enforce.log"
+      },
+      "workspaceRoot": {
+        "type": "string",
+        "default": "/home/node/.openclaw/workspace"
+      },
+      "protectedTargets": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": ["guardrail-lab"]
+      },
+      "approvalTargets": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": ["guardrail-lab/tmp"]
+      },
+      "resolveSymlinks": {
+        "type": "boolean",
+        "default": true
+      },
+      "escalateFallback": {
+        "type": "string",
+        "enum": ["block", "approval", "allow"],
+        "default": "block"
+      },
+      "hitl": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "judge": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "model": {
+            "type": "string",
+            "default": "devstral-small-2:latest"
+          },
+          "baseUrl": {
+            "type": "string",
+            "default": "http://ollama:11434"
+          },
+          "timeoutMs": {
+            "type": "number",
+            "default": 30000
+          },
+          "fallbackDecision": {
+            "type": "string",
+            "enum": ["block", "require_approval"],
+            "default": "block"
+          },
+          "minConfidence": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "default": "medium"
+          }
+        }
       }
     }
   }

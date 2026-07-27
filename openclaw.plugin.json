@@ -3,6 +3,14 @@
   "name": "OpenClaw Guardrail Plugin",
   "description": "Bachelorarbeitsprojekt: pluginbasierte Tool-Use-Guardrails fuer OpenClaw exec-Aufrufe.",
   "version": "0.1.0",
+  "contracts": {
+    "tools": ["guardrail_e6_exec"]
+  },
+  "toolMetadata": {
+    "guardrail_e6_exec": {
+      "optional": true
+    }
+  },
   "configSchema": {
     "type": "object",
     "additionalProperties": true,
@@ -38,6 +46,16 @@
         "type": "string",
         "enum": ["block", "approval", "allow"],
         "default": "block"
+      },
+      "e6Harness": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": false
+          }
+        }
       },
       "hitl": {
         "type": "object",

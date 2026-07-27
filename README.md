@@ -16,6 +16,8 @@ umfasst:
 - optionalen LLM-Judge nur fuer `escalate_llm`
 - explizites HITL-Gate (`hitl.enabled`): ohne HITL wird `require_approval`
   fail-closed geblockt, mit HITL als strukturierte OpenClaw-Anfrage ausgegeben
+- standardmaessig deaktivierter E6-Testtreiber (`e6Harness.enabled`), der nur
+  `pwd` und das feste Fixture-Kommando `rm -rf guardrail-lab/tmp` akzeptiert
 - JSONL-Logging fuer `before_tool_call`, Approval-Request,
   Approval-Resolution und `tool_result_persist`
 

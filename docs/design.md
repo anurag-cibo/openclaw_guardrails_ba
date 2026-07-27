@@ -128,6 +128,12 @@ lifecycle metric, not human reaction time.
 
 ## Configuration definition of done
 
+`e6Harness.enabled` is `false` by default. During E6 only, the runner enables
+the optional `guardrail_e6_exec` driver. It is restricted to the read-only
+`pwd` preflight and the fixed disposable-fixture command
+`rm -rf guardrail-lab/tmp`. It isolates the OpenClaw approval lifecycle; E5
+continues to test integration with the real core `exec` tool.
+
 The configuration step is complete when all of the following hold:
 
 1. C0 never returns a blocking or approval hook result.

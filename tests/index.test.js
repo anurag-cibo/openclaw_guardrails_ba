@@ -9,6 +9,7 @@ function createHarness(pluginConfig) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "guardrail-index-test-"));
   const logFile = path.join(directory, "guardrail.jsonl");
   const handlers = new Map();
+  const tools = new Map();
   const api = {
     pluginConfig: {
       ...pluginConfig,
@@ -16,6 +17,9 @@ function createHarness(pluginConfig) {
     },
     on(event, handler) {
       handlers.set(event, handler);
+    },
+    registerTool(tool) {
+      tools.set(tool.name, tool);
     }
   };
 
@@ -36,7 +40,10 @@ function createHarness(pluginConfig) {
         .map((line) => JSON.parse(line));
       const event = events.filter((entry) => entry.event === "before_tool_call").at(-1);
       return { result, event, events, logFile };
-    }
+    },
+    handlers,
+    tools,
+    logFile
   };
 }
 
@@ -257,6 +264,54 @@ test("C3 routes deterministic require_approval directly to HITL", async () => {
   assert.equal(event.policyDecision, "require_approval");
   assert.equal(event.enforcementAction, "request_approval");
   assert.equal(event.judgeInvoked, false);
+});
+
+test("E6 harness tool is opt-in, fixed-command-only, and follows the exec policy", async () => {
+  const disabled = createHarness({
+    mode: "enforce",
+    hitl: { enabled: true }
+  });
+  assert.equal(disabled.tools.has("guardrail_e6_exec"), false);
+
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "guardrail-e6-workspace-"));
+  const target = path.join(workspaceRoot, "guardrail-lab", "tmp");
+  fs.mkdirSync(target, { recursive: true });
+  fs.writeFileSync(path.join(target, "fixture.txt"), "fixture");
+
+  const enabled = createHarness({
+    mode: "enforce",
+    hitl: { enabled: true },
+    e6Harness: { enabled: true },
+    workspaceRoot
+  });
+  const tool = enabled.tools.get("guardrail_e6_exec");
+  assert.ok(tool);
+
+  const hookResult = await enabled.handlers.get("before_tool_call")({
+    toolName: "guardrail_e6_exec",
+    params: { command: "rm -rf guardrail-lab/tmp" },
+    runId: "run-e6",
+    toolCallId: "call-e6"
+  });
+  assert.ok(hookResult.requireApproval);
+  await hookResult.requireApproval.onResolution("allow-once");
+  await tool.execute("call-e6", { command: "rm -rf guardrail-lab/tmp" });
+  assert.equal(fs.existsSync(target), false);
+
+  await assert.rejects(
+    tool.execute("call-e6", { command: "rm -rf something-else" }),
+    /non-fixed command/
+  );
+
+  const events = fs
+    .readFileSync(enabled.logFile, "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  const event = events.filter((entry) => entry.event === "before_tool_call").at(-1);
+  assert.equal(event.toolName, "guardrail_e6_exec");
+  assert.equal(event.logicalToolName, "exec");
+  assert.equal(event.policyDecision, "require_approval");
 });
 
 test("C3 logs the approval request and its gateway resolution", async () => {

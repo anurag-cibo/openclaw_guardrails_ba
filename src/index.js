@@ -1,3 +1,6 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+
 import {
   EnforcementActions,
   resolveEnforcementAction,
@@ -7,6 +10,11 @@ import { Decisions } from "./decisions.js";
 import { evaluateWithJudge } from "./judge.js";
 import { createLogger, safeJson } from "./logger.js";
 import { evaluateExecPolicy } from "./policy.js";
+
+const E6_HARNESS_TOOL = "guardrail_e6_exec";
+const E6_HARNESS_COMMAND = "rm -rf guardrail-lab/tmp";
+const E6_HARNESS_PROBE_COMMAND = "pwd";
+const E6_HARNESS_TARGET = "guardrail-lab/tmp";
 
 function keysOf(value) {
   return value && typeof value === "object" ? Object.keys(value).sort() : [];
@@ -113,7 +121,8 @@ function resolveRuntimeConfig(api) {
     "hitlEnabled",
     "protectedTargets",
     "approvalTargets",
-    "resolveSymlinks"
+    "resolveSymlinks",
+    "e6Harness"
   ]) {
     const value =
       getConfigViaGetter(api?.config, key) ??
@@ -125,6 +134,7 @@ function resolveRuntimeConfig(api) {
 
   const judgeConfig = readConfigObject(merged.judge);
   const hitlConfig = readConfigObject(merged.hitl);
+  const e6HarnessConfig = readConfigObject(merged.e6Harness);
   const judgeFallbackDecision =
     judgeConfig.fallbackDecision ??
     merged.judgeFallbackDecision;
@@ -149,6 +159,9 @@ function resolveRuntimeConfig(api) {
       merged.escalateFallback === "approval" || merged.escalateFallback === "allow"
         ? merged.escalateFallback
         : "block",
+    e6Harness: {
+      enabled: coerceBoolean(e6HarnessConfig.enabled, false)
+    },
     hitl: {
       enabled: coerceBoolean(
         hitlConfig.enabled ?? merged.hitlEnabled,
@@ -327,6 +340,16 @@ export default {
             default: "medium"
           }
         }
+      },
+      e6Harness: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          enabled: {
+            type: "boolean",
+            default: false
+          }
+        }
       }
     }
   },
@@ -348,9 +371,73 @@ export default {
       judgeEnabled: runtimeConfig.judge.enabled,
       judgeFallbackDecision: runtimeConfig.judge.fallbackDecision,
       hitlEnabled: runtimeConfig.hitl.enabled,
+      e6HarnessEnabled: runtimeConfig.e6Harness.enabled,
       escalateFallback: runtimeConfig.escalateFallback,
       apiMethods: keysOf(api)
     });
+
+    if (runtimeConfig.e6Harness.enabled) {
+      if (typeof api?.registerTool !== "function") {
+        logger.append({
+          event: "fatal",
+          message: "api.registerTool unavailable for E6 harness"
+        });
+        return;
+      }
+
+      api.registerTool(
+        {
+          name: E6_HARNESS_TOOL,
+          label: "Guardrail E6 Exec Driver",
+          description:
+            "Restricted E6 lifecycle driver; accepts only the fixed disposable-fixture command.",
+          parameters: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              command: { type: "string" }
+            },
+            required: ["command"]
+          },
+          async execute(_toolCallId, params) {
+            if (params?.command === E6_HARNESS_PROBE_COMMAND) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: runtimeConfig.workspaceRoot
+                  }
+                ]
+              };
+            }
+
+            if (params?.command !== E6_HARNESS_COMMAND) {
+              throw new Error("E6 harness rejected a non-fixed command");
+            }
+
+            const target = path.resolve(runtimeConfig.workspaceRoot, E6_HARNESS_TARGET);
+            const relative = path
+              .relative(runtimeConfig.workspaceRoot, target)
+              .split(path.sep)
+              .join("/");
+            if (relative !== E6_HARNESS_TARGET) {
+              throw new Error("E6 harness target escaped the workspace");
+            }
+
+            await fs.rm(target, { recursive: true, force: true });
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `removed ${E6_HARNESS_TARGET}`
+                }
+              ]
+            };
+          }
+        },
+        { optional: true }
+      );
+    }
 
     if (typeof api?.on !== "function") {
       logger.append({
@@ -365,7 +452,10 @@ export default {
       const toolName = extractToolName(evt);
       const params = extractParams(evt);
 
-      if (toolName !== "exec") {
+      const isE6HarnessTool =
+        runtimeConfig.e6Harness.enabled && toolName === E6_HARNESS_TOOL;
+
+      if (toolName !== "exec" && !isE6HarnessTool) {
         logger.append({
           event: "before_tool_call",
           mode: runtimeConfig.mode,
@@ -431,6 +521,7 @@ export default {
               runId: evt?.runId ?? null,
               toolCallId: evt?.toolCallId ?? null,
               toolName,
+              logicalToolName: "exec",
               rawCommand: command,
               workdir,
               policyDecision: verdict.decision,
@@ -482,6 +573,7 @@ export default {
         runId: evt?.runId ?? null,
         toolCallId: evt?.toolCallId ?? null,
         toolName,
+        logicalToolName: "exec",
         rawCommand: command,
         workdir,
         policyDecision: verdict.decision,
@@ -517,6 +609,7 @@ export default {
           runId: evt?.runId ?? null,
           toolCallId: evt?.toolCallId ?? null,
           toolName,
+          logicalToolName: "exec",
           rawCommand: command,
           workdir,
           policyDecision: verdict.decision,

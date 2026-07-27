@@ -134,6 +134,44 @@ test("C1 maps an unresolved deterministic escalation to fail-closed block", asyn
   assert.equal(event.judgeInvoked, false);
 });
 
+test("canonical nested judge and HITL config overrides legacy flat keys", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    return ollamaResponse("allow");
+  };
+
+  try {
+    const harness = createHarness({
+      mode: "enforce",
+      judgeEnabled: true,
+      judgeModel: "legacy-model",
+      judgeTimeoutMs: 45000,
+      judgeFallbackDecision: "block",
+      hitlEnabled: true,
+      judge: {
+        enabled: false,
+        model: "canonical-model",
+        timeoutMs: 30000,
+        fallbackDecision: "require_approval"
+      },
+      hitl: { enabled: false },
+      escalateFallback: "block"
+    });
+    const { result, event } = await harness.exec("unknown-program --flag");
+
+    assert.deepEqual(result, { block: true });
+    assert.equal(fetchCalls, 0);
+    assert.equal(event.judgeInvoked, false);
+    assert.equal(event.hitlEnabled, false);
+    assert.equal(event.policyDecision, "escalate_llm");
+    assert.equal(event.enforcementAction, "block");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("C2 blocks a judge require_approval verdict when HITL is disabled", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => ollamaResponse("require_approval");

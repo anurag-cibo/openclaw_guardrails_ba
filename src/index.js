@@ -126,11 +126,11 @@ function resolveRuntimeConfig(api) {
   const judgeConfig = readConfigObject(merged.judge);
   const hitlConfig = readConfigObject(merged.hitl);
   const judgeFallbackDecision =
-    merged.judgeFallbackDecision ??
-    judgeConfig.fallbackDecision;
+    judgeConfig.fallbackDecision ??
+    merged.judgeFallbackDecision;
   const judgeMinConfidence =
-    merged.judgeMinConfidence ??
-    judgeConfig.minConfidence;
+    judgeConfig.minConfidence ??
+    merged.judgeMinConfidence;
 
   return {
     mode: merged.mode === "observe" ? "observe" : "enforce",
@@ -151,25 +151,25 @@ function resolveRuntimeConfig(api) {
         : "block",
     hitl: {
       enabled: coerceBoolean(
-        merged.hitlEnabled ?? hitlConfig.enabled,
+        hitlConfig.enabled ?? merged.hitlEnabled,
         false
       )
     },
     judge: {
       enabled: coerceBoolean(
-        merged.judgeEnabled ?? judgeConfig.enabled,
+        judgeConfig.enabled ?? merged.judgeEnabled,
         false
       ),
       model:
-        merged.judgeModel ??
         judgeConfig.model ??
+        merged.judgeModel ??
         "devstral-small-2:latest",
       baseUrl:
-        merged.judgeBaseUrl ??
         judgeConfig.baseUrl ??
+        merged.judgeBaseUrl ??
         "http://ollama:11434",
       timeoutMs: coercePositiveNumber(
-        merged.judgeTimeoutMs ?? judgeConfig.timeoutMs,
+        judgeConfig.timeoutMs ?? merged.judgeTimeoutMs,
         30000
       ),
       fallbackDecision:

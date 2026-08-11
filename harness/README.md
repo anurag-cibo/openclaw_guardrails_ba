@@ -1,140 +1,282 @@
-# Guardrail Experiment Harness — Neuaufbau
+# Guardrail Experiment Harness
 
-Status: kompakter profilgebundener Hauptlauf auf dem Linux-Zielhost validiert;
-noch nicht in Git überführt.
+Der Harness führt die Experimente aus, mit denen das Guardrail-Plugin dieses
+Repositories bewertet wird: deterministische Policy-Messungen, LLM-Judge-Läufe
+und End-to-End-Läufe gegen ein echtes OpenClaw-Gateway.
 
-Dieser Ordner ist die Arbeitskopie des Experiment-Harness. Die Experiment-Runner
-liegen unter `runners/`, der für die Messungen maßgebliche Plugin-Stand unter
-`vendor/plugin-baseline/` und die Auswertungspipeline unter `analysis/`. Diese
-Bestandteile sind reguläre, gepflegte Komponenten des Harness. Ihre Inhalte
-bleiben an den validierten Messstand gebunden und werden über ein
-SHA-256-Inventar in `registry/snapshots.json` gegen unbemerkte Änderung
-gesichert.
+Jeder Lauf erhält ein eigenes Verzeichnis mit unveränderlichem Manifest,
+Rohdaten, Logs und per SHA-256 registrierten Artefakten. Ein Hauptlauf wird nur
+nach einem bestandenen Piloten mit identischem Messvertrag freigegeben.
 
-## Ziel
+**Für die Kontrolllogik werden auf dem Host weder Python noch Node.js benötigt.**
+Beide Laufzeiten stecken in gepinnten Docker-Images.
 
-Der fertige Harness soll auf dem HAW-Host nur Bash, Docker und Docker Compose
-voraussetzen. Weder Python noch Node.js sollen auf dem Host installiert sein
-müssen. Die Laufzeiten werden später über ein festgelegtes Runtime-Image
-bereitgestellt.
+## Experimente
 
-Der derzeit freigegebene Hauptlauf wird explizit und SSH-entkoppelt gestartet:
+| ID | Gegenstand | Braucht Live-System |
+|---|---|---|
+| E1 | Policy-Charakterisierung auf dem Policy-Korpus | nein |
+| E1ext | Regelumgehung | nein |
+| E2 | Robustheit und Evasion | nein |
+| E3 | Deterministischer Laufzeit-Overhead | nein |
+| E4 | LLM-Judge-Charakterisierung | nur Ollama |
+| E5 | End-to-End-Läufe über die Konfigurationen C0–C3 | ja |
+| E6a | Approval-Lifecycle über den Testtreiber | ja |
+| E6b | Approval über das Core-Werkzeug `exec` | ja |
+
+E1 bis E3 laufen ohne Netzwerk, Gateway oder Modell. Damit lässt sich die
+Installation vollständig prüfen, bevor ein Live-System nötig wird.
+
+---
+
+# Teil 1 — Voraussetzungen
+
+## Host
+
+- Linux x86-64 mit Bash
+- Docker Engine
+- Docker Compose v2 (`docker compose version` muss funktionieren)
+- Zugriff auf den Docker-Socket
+- rund 2 GB Plattenplatz für die Laufzeit-Images
+
+Geprüft und freigegeben ist ausschließlich Linux x86-64. macOS und Windows sind
+nicht freigegeben; unter Windows lässt sich die Entwicklungstestsuite ausführen,
+die Live-Experimente nicht.
+
+## Zusätzlich für Live-Experimente (E5, E6a, E6b)
+
+- ein lauffähiges **OpenClaw-Compose-Projekt** mit den Dateien
+  `docker-compose.yml` und `docker-compose.ollama.override.yml`
+- der Dienst `openclaw-gateway`, erreichbar unter `http://127.0.0.1:18789/healthz`
+- ein **Ollama**-Dienst im selben Compose-Projekt
+- das im Profil angegebene Modell, standardmäßig `qwen3:30b`
+- das Guardrail-Plugin dieses Repositories im Gateway installiert
+
+Die validierte Kombination ist OpenClaw 2026.5.18 mit `qwen3:30b` für Agent und
+Judge. Das Bezugs- und Installationsverfahren für OpenClaw selbst gehört nicht
+zu diesem Repository.
+
+**Zum Speicherbedarf:** Agent und Judge verwenden dasselbe Modell. Auf der
+Validierungshardware (GRID V100S-32Q, 32 GB VRAM) war das notwendig — ein
+größeres Agentenmodell neben dem Judge führte zu CUDA-OOM. Wer mehr VRAM hat,
+kann Agent- und Judge-Modell im Profil trennen.
+
+---
+
+# Teil 2 — Installation prüfen, ohne Live-System
+
+Diese vier Schritte funktionieren auf jedem Docker-Host und brauchen weder
+OpenClaw noch ein Modell.
+
+## Schritt 1: Ausführungsrechte setzen
 
 ```bash
-./bin/harness launch live main --profile profiles/live-main.example.json \
-  --pilot-run PILOT-RUN-ID
+cd harness
+chmod +x bin/harness bin/*.sh adapters/live/*.sh runners/*.sh
 ```
 
-Sein finaler Ablauf ist:
+## Schritt 2: Kontroll-Runtime bauen
 
-```text
-doctor → Pilot → Pilotvalidierung → Hauptserie → Metriken → Prüfungen
+```bash
+./bin/harness runtime-build
+./bin/harness runtime-check
 ```
 
-Die vollständige Serie darf nur beginnen, wenn der Pilot mit demselben
-Ausführungsfingerprint erfolgreich war. Metriken dürfen nur aus einem explizit
-angegebenen, vollständigen Hauptlauf erzeugt werden.
+`runtime-build` baut das gepinnte Kontroll-Image. `runtime-check` führt
+Diagnose und Selbsttests **innerhalb** des Containers aus. Beides verändert
+nichts an einem OpenClaw-System.
 
-## Vorgesehene Bedienoberfläche
+## Schritt 3: Diagnose
 
 ```bash
 ./bin/harness doctor
-./bin/harness list
-./bin/harness plan --pilot
-./bin/harness validate-corpus corpora/custom/mein_korpus.jsonl
+```
+
+Erwartet wird `Registry: ok` sowie ein Runner-Inventar, dessen SHA-256 mit dem
+in `registry/snapshots.json` registrierten Wert übereinstimmt.
+
+## Schritt 4: Erster echter Messlauf
+
+```bash
 ./bin/harness offline pilot E1 E2 E3
 ./bin/harness judge pilot E4 --mock
-./bin/harness live plan pilot E5 E6a E6b
-./bin/harness profile validate profiles/live-pilot.example.json
-./bin/harness profile validate profiles/live-smoke.example.json
-./bin/harness live plan --profile profiles/live-pilot.example.json
+```
+
+Der Offline-Pilot klassifiziert Korpusfälle mit der eingefrorenen Policy und
+misst den deterministischen Overhead. Der Mock-Judge prüft nur den technischen
+Vertrag und ist für fachliche Metriken **nicht** zugelassen.
+
+Beide Läufe legen ein Verzeichnis unter `artifacts/runs/` an. Prüfen:
+
+```bash
+./bin/harness status
+./bin/harness verify <RUN-ID>
+./bin/harness summarize <RUN-ID>
+```
+
+Wenn `verify` die Integrität bestätigt, ist die Installation vollständig
+funktionsfähig.
+
+---
+
+# Teil 3 — Live-System vorbereiten
+
+## Schritt 5: OpenClaw-Repo bekanntmachen
+
+Alle Live-Befehle brauchen den absoluten Pfad zum OpenClaw-Compose-Projekt.
+Es gibt bewusst keinen Standardwert:
+
+```bash
+export OPENCLAW_REPO=/absoluter/pfad/zum/openclaw-repo
+```
+
+## Schritt 6: Gateway und Ollama starten
+
+```bash
+cd "$OPENCLAW_REPO"
+docker compose -f docker-compose.yml -f docker-compose.ollama.override.yml up -d ollama openclaw-gateway
+curl -fsS http://127.0.0.1:18789/healthz
+```
+
+## Schritt 7: Modell laden
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ollama.override.yml \
+  exec ollama ollama pull qwen3:30b
+```
+
+## Schritt 8: Guardrail-Plugin deployen
+
+Aus dem **Repository-Wurzelverzeichnis**, nicht aus `harness/`:
+
+```bash
+cd ..
+OPENCLAW_REPO=/absoluter/pfad/zum/openclaw-repo ./scripts/deploy.sh
+```
+
+Das Skript kopiert die Plugin-Quelle nach
+`/home/node/.openclaw/local-plugins/guardrail-spike`, startet das Gateway neu
+und verifiziert die Dateien im Container.
+
+Die Plugin-Kennung lautet `guardrail-spike` — nicht wie das Repository. Alle
+Konfigurationsschlüssel heißen entsprechend
+`plugins.entries.guardrail-spike.*`.
+
+## Schritt 9: Read-only Preflight
+
+```bash
+cd harness
 ./bin/harness live preflight
-./bin/harness metrics reference
-./bin/harness metrics run MAIN-RUN-ID
-./bin/harness summarize RUN-ID
-./bin/harness launch live pilot E5 E6a E6b
-./bin/harness launch live pilot --profile profiles/live-pilot.example.json
+./bin/harness live plugin-info
+```
+
+`live preflight` prüft Plattform, Docker, Compose, Socket-Rechte,
+Image-Identität, OpenClaw-Dienste und die Modelle. Es **verändert nichts**.
+Solange dieser Befehl nicht fehlerfrei durchläuft, bleibt die Live-Ausführung
+gesperrt.
+
+`live plugin-info` zeigt den SHA-256 der tatsächlich deployten Plugin-Dateien
+und vergleicht ihn mit der mitgelieferten Messreferenz. Derselbe Wert wird in
+jedes Run-Manifest geschrieben.
+
+---
+
+# Teil 4 — Live-Experimente
+
+## Schritt 10: Kurzer Smoke-Test
+
+Vier E6a-Läufe, auf dem Validierungshost rund siebeneinhalb Minuten:
+
+```bash
 ./bin/harness launch live pilot --profile profiles/live-smoke.example.json
-./bin/harness launch live pilot --profile profiles/live-main-pilot.example.json
-./bin/harness launch live main --profile profiles/live-main.example.json --pilot-run PILOT-RUN-ID
 ./bin/harness jobs
-./bin/harness job-status <job-id>
-./bin/harness job-log <job-id> --follow
-./bin/harness pilot
-./bin/harness run E1 E4
-./bin/harness all
-./bin/harness status <run-id>
-./bin/harness verify <run-id>
-./bin/harness resume <run-id>
+./bin/harness job-log <JOB-ID> --follow
 ```
 
-Aktuell implementiert und lokal testbar sind `doctor`, `list`, `plan`,
-`prepare`, `validate-corpus`, `profile validate`, `offline`, `judge`,
-`live plan`, `live pilot`, das profilgebundene `live main`, `metrics run`,
-`status`, `verify` und `summarize`. `prepare` legt nur ein
-isoliertes Run-Verzeichnis mit Manifest, Fingerprint, Status,
-Ereignisprotokoll und Artefaktordnern an; es führt noch kein Experiment aus.
-`offline` darf ausschließlich die freigegebenen E1-/E2-/E3-Adapter ausführen.
-`live preflight` prüft Docker, Compose, OpenClaw-Dienste, Ollama-Modelle und die
-fixierten Runtime-Images, ohne etwas zu verändern. Nach dem bestandenen
-Zielhost-Preflight sind Live-Piloten und ein durch `--pilot-run` qualifizierter
-Hauptlauf freigegeben. `run` und `all` bleiben gesperrt. Ein noch nicht
-fertiger Befehl darf keinen scheinbar erfolgreichen Messlauf erzeugen.
+`launch` startet den Lauf mit `nohup` in einer eigenen `setsid`-Session. Er
+überlebt einen SSH-Abbruch. `Ctrl+C` beendet bei `job-log --follow` nur die
+Logansicht, nicht den Messjob.
 
-Lokaler Aufruf während der Entwicklung:
+Nach Abschluss:
 
 ```bash
-node src/cli.mjs doctor
-node src/cli.mjs list
-node src/cli.mjs plan --pilot
-node src/cli.mjs prepare pilot
-node src/cli.mjs offline pilot E1 E2 E3
-npm test
+./bin/harness job-status <JOB-ID>
+./bin/harness verify <RUN-ID>
+./bin/harness summarize <RUN-ID>
 ```
 
-Auf einem Linux-/Docker-Host werden Diagnose und Runtime-Prüfung ohne lokal
-installiertes Node.js oder Python über den Bash-Einstieg ausgeführt:
+E6a braucht das im Plugin standardmäßig **deaktivierte** Testwerkzeug
+`guardrail_e6_exec`. Der Adapter aktiviert es nur für die Dauer von E6a und
+stellt den vorherigen Wert danach wieder her. Die Sicherheitsgrenze steht in
+[docs/SECURITY.md](docs/SECURITY.md). E5 und E6b brauchen es nicht.
+
+## Schritt 11: Hauptlauf
+
+Pilot und Hauptlauf verwenden denselben 20-Zeilen-Messvertrag (E5: 16,
+E6a: 4), bekommen aber getrennte Run-IDs. Der Hauptlauf wird nur nach einem
+passenden, bestandenen Piloten freigegeben.
 
 ```bash
-./bin/harness host-info
-./bin/harness runtime-build
-./bin/harness runtime-check
-./bin/harness package-source
-./bin/harness package-public
-./bin/harness live plan pilot E5 E6a E6b
-./bin/harness profile validate profiles/live-pilot.example.json
-./bin/harness live plan --profile profiles/live-pilot.example.json
-./bin/harness live preflight
+./bin/harness launch live pilot --profile profiles/live-main-pilot.example.json
+./bin/harness job-log <JOB-ID> --follow
+
+./bin/harness launch live main \
+  --profile profiles/live-main.example.json \
+  --pilot-run <PILOT-RUN-ID>
+./bin/harness job-log <JOB-ID> --follow
 ```
 
-Alle relativen `./bin/harness`-Aufrufe setzen voraus, dass das aktuelle
-Verzeichnis der Harness-Ordner ist. Aus dem Home-Verzeichnis muss zuerst zum
-übertragenen Harness gewechselt oder ein absoluter Pfad verwendet werden.
-Der vorläufige, noch nicht für Git bestimmte SCP-Ablauf steht in
-`docs/UNI_TRANSFER.md`.
+Auf dem Validierungshost dauerte jede der beiden Phasen rund 28 Minuten.
 
-Länger laufende Piloten und spätere Nachtläufe werden mit `launch` in einer
-eigenen Session gestartet. `nohup` plus `setsid` entkoppeln sie von SSH. Das
-Folgelog kann mit `job-log <job-id> --follow` angesehen werden; `Ctrl+C`
-beendet dabei nur `tail`, nicht den Messjob.
+Das Gate vergleicht Messmatrix, Korpus-Hashes, Adapter-, Kontroll- und
+Runtimestand, Modelle sowie den normalisierten Hash des deployten Plugins. Ein
+abweichender oder unvollständiger Pilot wird vor dem Start abgewiesen.
 
-Der kurze, fuer Aussenstehende vorgesehene Standardpfad ist
-`profiles/live-smoke.example.json`. Er umfasst vier E6a-Laeufe und benoetigte
-auf dem HAW-Validierungshost rund siebeneinhalb Minuten. Die bisherige
-32-Zeilen-Matrix bleibt als erweiterter Technikpilot verfuegbar, ist aber nicht
-der Standard-Quickstart. Der normale Hauptlauf ist mit 20 Ergebniszeilen
-bewusst begrenzt; die historische 890-Zeilen-Rekonstruktion wird nicht als
-normaler Produktlauf freigeschaltet.
+---
 
-`package-public` baut aus einer expliziten Allowlist einen separaten
-Release-Kandidaten. Private Korpora, Forschungsreferenzen, Entwicklungsdocs,
-Run-Artefakte, Imagearchive und zielhostspezifische Pfade werden dabei
-automatisch ausgeschlossen. Das Paket erzeugt ein SHA-256-Dateimanifest und
-enthaelt einen eigenen Selbsttest.
+# Teil 5 — Ergebnisse
 
-Private Live-/Approval-Korpora muessen nicht in den Harness kopiert werden. Ein
-Profil mit `"root": "data"` referenziert sie relativ zu einer externen,
-read-only eingebundenen Datenwurzel:
+Nach einem qualifizierten Hauptlauf entstehen die Metriken automatisch:
+
+```bash
+./bin/harness verify <MAIN-RUN-ID>
+./bin/harness summarize <MAIN-RUN-ID>
+./bin/harness metrics run <MAIN-RUN-ID>
+```
+
+Ablage je Lauf:
+
+```text
+artifacts/runs/<RUN-ID>/
+├── manifest.json          unveränderlich: Plan, Eingaben, Fingerprints
+├── status.json            revisionierter Stufenstatus
+├── events.jsonl           Ereignisprotokoll
+├── inputs/                eingefrorenes Profil und Korpuskopien
+├── raw/                   Rohdaten je Experiment
+│   └── E5/E5_live_runs.jsonl
+├── derived/               Auswertung
+│   └── metrics.bundle.json
+└── logs/
+```
+
+Die Rohdatenformate entsprechen denen der ursprünglichen Messreihen: eine
+JSONL-Zeile je Lauf, dazu Gateway-Logdelta und Dateisystemzustand, erzeugt vom
+selben Auswerter `runners/evaluate_live_run.py`.
+
+`metrics.bundle.json` ist die maschinenlesbare Quelle. Jede Binomialmetrik
+enthält Zähler, Grundmenge, Rate und Wilson-95%-Intervall; nicht erhobene
+Telemetrie bleibt ausdrücklich `null` und wird nie als Null interpretiert.
+Definitionen stehen in [docs/METRICS.md](docs/METRICS.md).
+
+Grafikerzeugung gehört bewusst nicht zum Funktionsumfang. Die Schnittstelle
+endet beim validierten Metrikobjekt.
+
+---
+
+# Teil 6 — Eigene Korpora
+
+Eigene Forschungsdaten müssen nicht in das Repository. Eine externe Datenwurzel
+wird read-only unter `/harness-data` eingebunden:
 
 ```bash
 export HARNESS_DATA_ROOT=/absoluter/pfad/zu/meinen-korpora
@@ -142,86 +284,65 @@ export HARNESS_DATA_ROOT=/absoluter/pfad/zu/meinen-korpora
 ./bin/harness launch live pilot --profile profiles/local/mein-pilot.json
 ```
 
-Im Container und in reproduzierbaren Plaenen erscheint nur
-`/harness-data/<relativer-pfad>`; der private Hostpfad wird nicht in den Plan
-geschrieben. Details und das ausfuehrbare Beispiel stehen in
-`profiles/README.md`.
+Profile mit `"root": "data"` referenzieren nur relative Pfade. Absolute Pfade,
+Traversal und Symlink-Ausbrüche werden abgewiesen; Pläne und Manifeste
+enthalten den privaten Hostpfad nicht. Lokale Profile unter `profiles/local/`
+sind von der Versionierung ausgenommen.
 
-## Struktur
+Format, Pflichtfelder und ein kopierbares Beispiel stehen in
+[docs/CORPORA.md](docs/CORPORA.md), die Profilstruktur in
+[docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
-```text
-Harness/
-├── README.md
-├── TEMP_KAPITEL4_NOTIZEN.md
-├── bin/                    # Host-CLI
-├── src/                    # Kontrollschicht
-├── adapters/live/          # Live-Adapter mit Gateway-Bereitschaftspruefung
-├── runners/                # Experiment-Runner (E5, E6b, Approval, Gateway)
-├── vendor/plugin-baseline/ # gepinnter Plugin-Messstand
-├── analysis/               # Auswertungspipeline (Python)
-├── corpora/                # Beispiele, Schemata, Fixtures, private Korpora
-├── profiles/               # öffentliche Beispiele und ignorierte lokale Profile
-├── registry/               # Experimente, Korpora und Auswertungspipeline
-├── docs/                   # Entwicklungs- und Provenienzdokumentation
-├── tests/                  # Harness-Selbsttests
-├── runtime/                # gepinnte, lokal validierte Container-Laufzeit
-├── artifacts/runs/         # isolierte Ausgaben je Run-ID
-└── reference/              # eingefrorene Vergleichsausgaben
+Korpus vorab prüfen:
+
+```bash
+./bin/harness validate-corpus /pfad/zu/meinem_korpus.jsonl
 ```
 
-## Harte Entwicklungsregeln
+---
 
-1. `runners/` und `vendor/plugin-baseline/` bleiben inhaltlich an den
-   validierten Messstand gebunden; jede Änderung erfordert einen neuen Pilot.
-2. Der historische Harness unter `../experiments/harness/` wird nicht bearbeitet.
-3. Pilot-, Diagnose-, Mock- und Hauptdaten erhalten getrennte Run-Verzeichnisse.
-4. Auswertung liest niemals durch implizite Suche aus mehreren Ergebnisordnern.
-5. Jede Eingabe wird im Run-Manifest mit Pfad und SHA-256 dokumentiert.
-6. Eine neue Implementierung ersetzt eine alte erst nach einem Golden-/Paritätstest.
-7. Ein fehlgeschlagener Pflichtschritt verhindert die Metrikfreigabe.
+# Troubleshooting
 
-`metrics reference` führt die aktuell autoritativen Golden-Ausgaben
-deterministisch zusammen. Das Ergebnis ist ein Paritätsanker und markiert sich
-selbst ausdrücklich als **keine** neue Harness-Hauptserie. Neue profilgebundene
-Metriken werden nur aus einer expliziten, vollständigen Haupt-Run-ID akzeptiert.
-Der Hauptlauf erzeugt `derived/metrics.bundle.json` automatisch und registriert
-dessen SHA-256.
+**`./bin/harness: No such file or directory`** — Sie stehen nicht im
+`harness/`-Verzeichnis. Alle relativen Aufrufe setzen das voraus.
 
-`summarize RUN-ID` ist die read-only Run-Diagnostik. Sie prüft zuerst alle
-registrierten Artefakthashes und trennt für E6 Modell-Refusals, erreichte
-Tool-/Approval-Läufe, valide Läufe und bedingte Enforcement-Fidelity. Bei
-Piloten weist die Ausgabe ausdrücklich `Finalmetrik-Eignung: nein` aus; die
-deskriptiven Pilotkennzahlen werden dennoch vollständig berechnet und bleiben
-als technischer Validierungsnachweis erhalten.
+**`OPENCLAW_REPO muss als absoluter Pfad gesetzt sein`** — Erwartetes
+Verhalten. Es gibt keinen Standardpfad; siehe Schritt 5.
 
-`profile validate PROFIL.json` prüft einen vollständigen Live-Vertrag aus
-Korpora, Modellen, Fall-/Konfigurationsmatrix und Retrygrenzen. Profil,
-tatsächliche Korpus-Hashes sowie die neue Adapter-Schicht gehen in den
-Ausführungsfingerprint ein. E5, E6a und E6b warten nach Gateway-Neustarts aktiv
-auf eine erfolgreiche RPC-Probe; feste Wartezeiten sind keine
-Bereitschaftsannahme der neuen Kontrollschicht mehr.
+**Preflight meldet fehlende Image-Identität** — Das Laufzeit-Image wurde auf
+diesem Host noch nicht gebaut oder importiert. Siehe Schritt 2.
 
-## Metrikpipeline
+**E6a scheitert unmittelbar nach einem Gateway-Neustart** — Der Adapter prüft
+die Gateway-Bereitschaft aktiv per RPC und wiederholt eng klassifizierte
+Startfehler. Halten die Fehler an, prüfen Sie
+`docker compose logs openclaw-gateway`.
 
-`compute_metrics.py` ist nicht mehr die maßgebliche Auswertung. Die aktuelle
-Bachelorarbeit beruht auf einer Verbundpipeline aus `build_evaluation.py`, der
-E8-Auswertung, der späteren E3-HAW-Auswertung und E5aeg. Die vollständige
-Herleitung und der geplante Merge stehen in [docs/METRIKPIPELINE.md](docs/METRIKPIPELINE.md).
+**Ein zweiter Live-Lauf wird mit Exit-Code 4 abgewiesen** — Live-Läufe haben
+eine exklusive Sperre. Parallele Läufe würden dieselbe Gateway-Konfiguration
+gleichzeitig verändern.
 
-## Offline-Adapter und Korpusformat
+**Viele `no_tool_call`-Zeilen** — Das Modell hat den Werkzeugaufruf verweigert.
+Das ist eine fehlende Erreichbarkeit, kein Guardrail-Erfolg, und wird in der
+Auswertung getrennt ausgewiesen.
 
-Der Offline-Policy-Adapter führt keine Shell-Befehle aus. Er übergibt den im
-Korpus gespeicherten Befehlsstring direkt an die eingefrorene
-`evaluateExecPolicy`-Funktion und schreibt deren Klassifikation in ein
-einheitliches JSONL-Ergebnis. E1 und E2 unterscheiden sich daher im Korpus,
-nicht in der Guardrail-Implementierung. E3 misst dieselbe Funktion wiederholt
-in frischen Node-Prozessen und benötigt ebenfalls kein Gateway, Modell oder
-Netzwerk.
+---
 
-Das exakte JSONL-Format, Pflichtfelder und ein Minimalbeispiel stehen in
-[docs/KORPUSFORMAT.md](docs/KORPUSFORMAT.md).
+# Weiterführende Dokumentation
 
-## Noch nicht erledigt
+- [docs/COMMANDS.md](docs/COMMANDS.md) — vollständige Kommandoreferenz
+- [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — Profile und Konfiguration
+- [docs/CORPORA.md](docs/CORPORA.md) — Korpusformate und Erfolgsprädikate
+- [docs/METRICS.md](docs/METRICS.md) — Metrikdefinitionen und Grenzen
+- [docs/OUTPUTS.md](docs/OUTPUTS.md) — Runs, Artefakte und Provenienz
+- [docs/SECURITY.md](docs/SECURITY.md) — Betriebsgrenzen und Limitationen
 
-- abgabefähige finale Dokumentation statt interner Entwicklungsnotizen
-- erst danach kontrollierte Git-Überführung und Einordnung in Kapitel 4
+# Aussagegrenzen
+
+Die mitgelieferten Beispielkorpora sind klein. Ein Lauf mit ihnen ist ein
+technischer Funktionsnachweis und **keine statistisch belastbare Messreihe**.
+Die Metriken gelten exakt für Profil, Korpora, Modelle, Pluginstand und Matrix
+des jeweiligen Laufs.
+
+Modellinferenz bleibt trotz `temperature=0` nicht vollständig deterministisch.
+Live-Läufe verändern und starten das OpenClaw-Gateway neu; der Host-Runner
+benötigt den Docker-Socket, was praktisch Host-Rechten entspricht.

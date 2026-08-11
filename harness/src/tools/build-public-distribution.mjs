@@ -142,8 +142,8 @@ export async function buildPublicDistribution(outputDirectory) {
     "runners/run_live.sh", "runners/run_e6b.sh", "runners/setup_lab.sh",
   ]) await requireExplicitOpenClawRepo(outputRoot, relative);
 
-  await copyFile("distribution/public/README.md", outputRoot, "README.md");
-  await copyTree("distribution/public/docs", outputRoot, "docs");
+  await copyFile("README.md", outputRoot, "README.md");
+  await copyTree("docs", outputRoot, "docs");
   await copyFile("distribution/public/tests/public-smoke.test.mjs", outputRoot, "tests/public-smoke.test.mjs");
 
   const corpora = {
@@ -232,7 +232,7 @@ export async function buildPublicDistribution(outputDirectory) {
 
   const forbidden = [
     "runtime/images", "runtime/packages", "runtime/public", "artifacts/jobs", "artifacts/metrics",
-    "reference", "docs/ENTWICKLUNGSSTATUS.md", "TEMP_KAPITEL4_NOTIZEN.md", "corpora/private", "corpora/custom",
+    "reference", "notes", "TEMP_KAPITEL4_NOTIZEN.md", "corpora/private", "corpora/custom",
   ];
   const files = await filesBelow(outputRoot);
   const violations = files.filter((file) => forbidden.some((item) => file === item || file.startsWith(`${item}/`)));

@@ -7,7 +7,7 @@
     "builtImage": "guardrail-harness-runtime:dev",
     "builtImageId": "sha256:c5553f4603592dfa9cf74d8ed55ef11ed0b3ed4f5734b93c8f10fee23dcebc7a",
     "targetImportedImageId": "sha256:ebf5ed2bcb91549dd6e310eca3e9480d0ac60fe746132f466c360425a8afd38f",
-    "identityAuthority": "Primär ist der SHA-256 des Exportarchivs; Docker .Id kann zwischen Docker-Desktop- und Linux-Image-Store abweichen.",
+    "identityAuthority": "Reproduzierbar sind der gepinnte Basis-Digest, der SHA-256 des Exportarchivs und die Laufzeitversionen im Image. Die lokale Docker-Image-ID ist es nicht: Sie haengt von Docker- und BuildKit-Version ab. Sie wird bevorzugt geprueft, aber bei Abweichung nicht erzwungen; dann entscheiden die gelockten Laufzeitversionen und die beobachtete ID wird ausgewiesen.",
     "platform": "linux/amd64",
     "node": "20.19.0",
     "python": "3.11.2 (Debian Bookworm python3)",

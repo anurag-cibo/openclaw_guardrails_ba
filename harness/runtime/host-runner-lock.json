@@ -4,7 +4,7 @@
   "image": "guardrail-harness-host-runner:dev",
   "builtImageId": "sha256:cf373c5b23ff3e04d0a1fb94523a75f66e29340c630ae3b9da52c4a194bf9497",
   "targetImportedImageId": "sha256:8ec54bb6c9f6828f0f053d47d1c29647491e8552f61653b4cadd3a26a157925e",
-  "identityAuthority": "Primär ist der SHA-256 des Exportarchivs; Docker .Id kann zwischen Docker-Desktop- und Linux-Image-Store abweichen.",
+  "identityAuthority": "Reproduzierbar sind der gepinnte Basis-Digest, der SHA-256 des Exportarchivs und die Laufzeitversionen im Image. Die lokale Docker-Image-ID ist es nicht: Sie haengt von Docker- und BuildKit-Version ab. Sie wird bevorzugt geprueft, aber bei Abweichung nicht erzwungen; dann entscheiden die gelockten Laufzeitversionen und die beobachtete ID wird ausgewiesen.",
   "imageCreatedAt": "2026-08-10T19:16:36.868471576Z",
   "platform": "linux/amd64",
   "controlImageId": "sha256:c5553f4603592dfa9cf74d8ed55ef11ed0b3ed4f5734b93c8f10fee23dcebc7a",

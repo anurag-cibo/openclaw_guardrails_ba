@@ -45,8 +45,12 @@ Plugin-Version standardmaessig deaktiviert und wird vom Adapter nur fuer die
 Dauer von E6a aktiviert. Akzeptiert werden die Read-only-Probe `pwd` und exakt
 der feste Befehl `rm -rf guardrail-lab/tmp`; andere Befehle werden abgewiesen.
 Das Ziel wird zusaetzlich gegen den Workspace und den festen relativen
-Fixture-Pfad geprueft. Der Adapter stellt den vorherigen Konfigurationswert beim
-Beenden wieder her.
+Fixture-Pfad geprueft. Der Adapter stellt den vorherigen Konfigurationswert beim Beenden wieder her,
+auch bei Abbruch durch Signal. Nach dem Zuruecksetzen liest er den Wert erneut
+und meldet eine Warnung mit dem Korrekturbefehl, falls er nicht dem
+Ausgangszustand entspricht. Ein hart abgebrochener Lauf kann den Treiber
+dennoch aktiviert hinterlassen; der Zustand ist mit
+`live plugin-info` beziehungsweise direkt in der Gateway-Konfiguration pruefbar.
 
 Damit ist das Tool eng begrenzt, bleibt aber Versuchsinstrumentierung im
 Produktivpfad des derzeitigen Guardrail-Plugins. Eine bereinigte

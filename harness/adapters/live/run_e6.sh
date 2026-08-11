@@ -38,6 +38,21 @@ run() { if [ "$DRY_RUN" = "1" ]; then echo "  + $*"; else eval "$@"; fi; }
 
 E6_HARNESS_ORIGINAL="false"
 E6_HARNESS_CHANGED=0
+E6_HARNESS_KEY="plugins.entries.guardrail-spike.config.e6Harness.enabled"
+
+# OpenClaw liefert den Wert je nach Version mit Anfuehrungszeichen, Zeilenumbruch
+# oder Grossschreibung. Ohne Normalisierung schlaegt das Zurueckschreiben mit
+# --strict-json still fehl und der Testtreiber bleibt dauerhaft aktiv.
+normalize_bool() {
+  case "$(printf '%s' "$1" | tr -d '[:space:]"' | tr '[:upper:]' '[:lower:]')" in
+    true) printf 'true' ;;
+    *)    printf 'false' ;;
+  esac
+}
+
+read_e6_harness_flag() {
+  normalize_bool "$(occ "openclaw config get $E6_HARNESS_KEY" 2>/dev/null || printf '')"
+}
 
 enable_e6_harness_tool() {
   if [ "$DRY_RUN" = "1" ]; then
@@ -46,28 +61,39 @@ enable_e6_harness_tool() {
     return
   fi
 
-  E6_HARNESS_ORIGINAL=$(
-    occ "openclaw config get plugins.entries.guardrail-spike.config.e6Harness.enabled" \
-      2>/dev/null || printf 'false'
-  )
-  occ "openclaw config set plugins.entries.guardrail-spike.config.e6Harness.enabled true --strict-json"
+  E6_HARNESS_ORIGINAL="$(read_e6_harness_flag)"
+  say "Testtreiber-Ausgangszustand: $E6_HARNESS_ORIGINAL"
+  occ "openclaw config set $E6_HARNESS_KEY true --strict-json"
   E6_HARNESS_CHANGED=1
 }
 
 restore_e6_harness_tool() {
   [ "$E6_HARNESS_CHANGED" = "1" ] || return 0
+  E6_HARNESS_CHANGED=0
   if [ "$DRY_RUN" = "1" ]; then
     echo "  + restore guardrail-spike e6Harness"
     return 0
   fi
 
+  local actual
   set +e
-  occ "openclaw config set plugins.entries.guardrail-spike.config.e6Harness.enabled '$E6_HARNESS_ORIGINAL' --strict-json" >/dev/null 2>&1
+  occ "openclaw config set $E6_HARNESS_KEY $E6_HARNESS_ORIGINAL --strict-json" >/dev/null 2>&1
   dc restart openclaw-gateway >/dev/null 2>&1
+  actual="$(read_e6_harness_flag)"
   set -e
+
+  if [ "$actual" = "$E6_HARNESS_ORIGINAL" ]; then
+    say "Testtreiber auf '$E6_HARNESS_ORIGINAL' zurueckgesetzt."
+  else
+    say "[WARNUNG] Testtreiber konnte nicht zurueckgesetzt werden."
+    say "          erwartet=$E6_HARNESS_ORIGINAL aktuell=$actual"
+    say "          Manuell beheben:"
+    say "          openclaw config set $E6_HARNESS_KEY false --strict-json"
+  fi
 }
 
-trap restore_e6_harness_tool EXIT
+# Auch bei Abbruch durch Signal zuruecksetzen, nicht nur bei regulaerem Ende.
+trap restore_e6_harness_tool EXIT INT TERM
 
 if [ "$DRY_RUN" != "1" ]; then
   mkdir -p "$RAWDIR"

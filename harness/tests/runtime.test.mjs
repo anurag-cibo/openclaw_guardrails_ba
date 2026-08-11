@@ -30,9 +30,9 @@ test("host wrapper binds host ownership and rejects an unexpected image", async 
   const jobs = await text("bin/job-control.sh");
   assert.match(wrapper, /HARNESS_UID=.*id -u/);
   assert.match(wrapper, /HARNESS_GID=.*id -g/);
-  assert.match(wrapper, /actual.*!=.*expected/);
   assert.match(wrapper, /targetImportedImageId/);
   assert.match(wrapper, /verify_runtime_image/);
+  assert.match(wrapper, /image_matches_locked_id/);
   assert.match(wrapper, /live:pilot\|live:main/);
   assert.match(wrapper, /launch live main/);
   assert.match(jobs, /nohup setsid bash/);
@@ -92,4 +92,35 @@ test("live plugin-info uses the read-only preflight and host-runner boundary", a
   assert.match(wrapper, /subcommand" = "plugin-info"/u);
   assert.match(wrapper, /bash "\$ROOT\/bin\/target-preflight\.sh"/u);
   assert.match(wrapper, /run --rm host-runner "\$@"/u);
+});
+
+test("image identity degrades to the locked runtime versions instead of failing", async () => {
+  const wrapper = await text("bin/harness");
+  // Die Docker-Image-ID ist nicht versionsstabil. Weicht sie ab, muss der
+  // inhaltliche Nachweis entscheiden statt eines harten Abbruchs.
+  assert.match(wrapper, /node --version; python3 --version/u);
+  assert.match(wrapper, /weder der gelockten ID noch den gelockten Laufzeitversionen/u);
+  assert.match(wrapper, /abweichende Docker-ID/u);
+  assert.match(wrapper, /docker --version/u);
+});
+
+test("runtime-build refuses to overwrite an image that already matches the lock", async () => {
+  const wrapper = await text("bin/harness");
+  assert.match(wrapper, /FORCE_BUILD/u);
+  assert.match(wrapper, /runtime-build --force/u);
+  assert.match(wrapper, /containerd-Image-Store ist das alte Image danach geloescht/u);
+  // Der Schutz muss vor dem Bauen greifen, nicht danach.
+  const guard = wrapper.indexOf("ABBRUCH] Es liegt bereits ein gegen den Lock validiertes Image vor");
+  const build = wrapper.indexOf('build control "$@"');
+  assert.ok(guard > 0 && build > guard, "Schutzabfrage steht nicht vor dem Build");
+});
+
+test("the E6a driver restores its flag verifiably and on signals", async () => {
+  const adapter = await text("adapters/live/run_e6.sh");
+  assert.match(adapter, /trap restore_e6_harness_tool EXIT INT TERM/u);
+  assert.match(adapter, /normalize_bool/u);
+  assert.match(adapter, /WARNUNG\] Testtreiber konnte nicht zurueckgesetzt werden/u);
+  // Der Zustand muss nach dem Zuruecksetzen erneut gelesen und verglichen werden.
+  const restore = adapter.slice(adapter.indexOf("restore_e6_harness_tool() {"));
+  assert.match(restore, /actual="\$\(read_e6_harness_flag\)"/u);
 });

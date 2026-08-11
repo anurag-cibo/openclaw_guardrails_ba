@@ -10,7 +10,8 @@ direkt mit `node src/cli.mjs …` aufrufen.
 | Befehl | Wirkung | Verändert etwas |
 |---|---|---|
 | `./bin/harness host-info` | technische Hostdaten | nein |
-| `./bin/harness runtime-build` | gepinntes Kontroll-Image bauen | lokale Images |
+| `./bin/harness runtime-build` | Kontroll-Image bauen; bricht ab, wenn bereits ein gelocktes Image vorliegt | lokale Images |
+| `./bin/harness runtime-build --force` | Neubau erzwingen, ersetzt das vorhandene Image unwiderruflich | lokale Images |
 | `./bin/harness runtime-check` | Diagnose und Selbsttests im Container | nein |
 | `./bin/harness doctor` | Registry, Korpus-Hashes, Runner-Inventar | nein |
 | `./bin/harness list` | registrierte Experimente und Korpora | nein |
@@ -108,6 +109,18 @@ Forschungsreferenzen, interne Notizen, Run-Artefakte und Imagearchive werden
 ausgeschlossen; zusätzlich bricht der Bau ab, wenn zielhostspezifische Werte im
 Ergebnis auftauchen. Das Paket enthält ein SHA-256-Dateimanifest und einen
 eigenen Selbsttest.
+
+## Image-Identitaet
+
+Die lokale Docker-Image-ID ist kein reproduzierbares Merkmal; sie haengt von
+Docker- und BuildKit-Version ab. Der Harness prueft deshalb gestuft:
+
+1. Stimmt die Image-ID mit `builtImageId` oder `targetImportedImageId` ueberein,
+   ist die Identitaet exakt belegt.
+2. Weicht sie ab, entscheiden die im Lock festgehaltenen Laufzeitversionen im
+   Image (`node`, `python3`, beim Host-Runner die Docker-CLI). Der Lauf wird
+   fortgesetzt und die beobachtete Image-ID ausgewiesen.
+3. Stimmen auch die Versionen nicht, bricht der Lauf ab.
 
 ## Umgebungsvariablen
 

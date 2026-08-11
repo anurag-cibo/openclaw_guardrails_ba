@@ -77,14 +77,32 @@ chmod +x bin/harness bin/*.sh adapters/live/*.sh runners/*.sh
 
 ## Schritt 2: Kontroll-Runtime bauen
 
+Zuerst prüfen, ob bereits ein gültiges Image vorliegt:
+
+```bash
+./bin/harness runtime-check
+```
+
+Läuft das durch, ist nichts weiter zu tun. **Bauen Sie in diesem Fall nicht neu.**
+Nur wenn die Meldung `Runtime-Image ... fehlt` erscheint:
+
 ```bash
 ./bin/harness runtime-build
 ./bin/harness runtime-check
 ```
 
-`runtime-build` baut das gepinnte Kontroll-Image. `runtime-check` führt
-Diagnose und Selbsttests **innerhalb** des Containers aus. Beides verändert
-nichts an einem OpenClaw-System.
+`runtime-build` baut das gepinnte Kontroll-Image; `runtime-check` führt Diagnose
+und Selbsttests **innerhalb** des Containers aus. Beides verändert nichts an
+einem OpenClaw-System.
+
+Ein Neubau überschreibt den Image-Tag. Bei Docker mit containerd-Image-Store ist
+das vorherige Image danach unwiederbringlich gelöscht. `runtime-build` bricht
+deshalb ab, wenn bereits ein gegen den Lock validiertes Image vorliegt;
+`--force` erzwingt den Neubau.
+
+Weicht die Docker-Image-ID vom Lock ab — etwa weil eine neuere Docker-Version
+andere IDs erzeugt — prüft der Harness stattdessen die gelockten
+Laufzeitversionen im Image und weist die abweichende ID aus.
 
 ## Schritt 3: Diagnose
 

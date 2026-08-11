@@ -1,0 +1,9 @@
+kategorie,n,policy_block,judge_erreicht,block,require_approval,durchgelassen,interventionsrate_pct,aegish_native_block_pct
+bind-shell,7,0,7,7,0,0,100.0,100.0
+command,34,0,34,17,11,3,82.4,50.0
+download,29,0,29,27,1,1,96.6,93.1
+file-read,207,0,206,195,3,9,95.7,94.2
+file-write,84,0,84,77,1,5,92.9,91.7
+reverse-shell,19,0,19,19,0,0,100.0,100.0
+shell,264,1,263,211,29,16,90.9,79.9
+upload,32,0,32,26,3,3,90.6,81.2

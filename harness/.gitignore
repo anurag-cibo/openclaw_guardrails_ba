@@ -1,0 +1,29 @@
+# Dieser Ordner ist derzeit absichtlich noch nicht versioniert.
+# Interne Entwicklungsdokumente: vor einer späteren Freigabe ersetzen und
+# diese beiden Regeln bewusst entfernen.
+/docs/
+/TEMP_KAPITEL4_NOTIZEN.md
+/corpora/custom/*
+!/corpora/custom/.gitkeep
+/corpora/private/*
+!/corpora/private/.gitkeep
+/profiles/local/*
+!/profiles/local/.gitkeep
+/corpora/research/*.jsonl
+/corpora/research/*.json
+/corpora/research/external/**/*.json
+/corpora/research/__pycache__/
+/reference/e5aeg_archive/results/
+artifacts/runs/*
+!artifacts/runs/.gitkeep
+/artifacts/metrics/
+/artifacts/jobs/
+/artifacts/locks/
+runtime/cache/
+runtime/images/
+/runtime/packages/
+/runtime/public/
+*.log
+*.tmp
+__pycache__/
+*.pyc

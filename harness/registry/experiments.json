@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "canonicalOrder": [
+    "E1", "E1ext", "E1aeg", "E2", "E3", "E4", "E4ext",
+    "E4abl", "E4aeg", "E5", "E5aeg", "E6a", "E6b", "E7"
+  ],
+  "experiments": {
+    "E1": {
+      "title": "Policy-Charakterisierung",
+      "level": "lab",
+      "runner": "policy",
+      "adapter": "src/adapters/policy-offline.mjs",
+      "corpus": "policy",
+      "expected": { "unit": "cases", "count": 116 },
+      "pilot": { "cases": 8 }
+    },
+    "E1ext": {
+      "title": "Regelumgehung",
+      "level": "lab",
+      "runner": "policy",
+      "adapter": "src/adapters/policy-offline.mjs",
+      "corpus": "rule-evasion",
+      "expected": { "unit": "cases", "count": 35 },
+      "pilot": { "cases": 8 }
+    },
+    "E1aeg": {
+      "title": "Policy extern",
+      "previousId": "E8.1",
+      "level": "lab",
+      "runner": "policy",
+      "adapter": "runners/run_aegish_policy.mjs",
+      "corpus": "aegish",
+      "expected": { "unit": "commands", "count": 1172 },
+      "pilot": { "cases": 12 }
+    },
+    "E2": {
+      "title": "Robustheit und Evasion",
+      "level": "lab",
+      "runner": "policy",
+      "adapter": "src/adapters/policy-offline.mjs",
+      "corpus": "evasion",
+      "expected": { "unit": "cases", "count": 36 },
+      "pilot": { "cases": 8 }
+    },
+    "E3": {
+      "title": "Deterministischer Overhead",
+      "level": "lab",
+      "runner": "latency",
+      "adapter": "src/adapters/latency-offline.mjs",
+      "corpus": "policy",
+      "expected": { "unit": "evaluations", "count": 1740000 },
+      "run": { "iterations": 3000, "rounds": 5, "warmupCalls": 5000 },
+      "pilot": { "iterations": 50, "rounds": 1, "warmupCalls": 5000 }
+    },
+    "E4": {
+      "title": "Judge-Charakterisierung",
+      "level": "lab",
+      "runner": "judge",
+      "adapter": "src/adapters/judge-offline.mjs",
+      "corpus": "judge-core",
+      "expected": { "unit": "calls", "count": 390, "cases": 78 },
+      "run": { "cases": 78, "repetitions": 5 },
+      "pilot": { "cases": 8, "repetitions": 1 }
+    },
+    "E4ext": {
+      "title": "Judge jenseits der Regel",
+      "previousId": "Schritt 4",
+      "level": "lab-counterfactual",
+      "runner": "judge",
+      "adapter": "runners/run_judge_extension.mjs",
+      "corpus": "rule-evasion",
+      "expected": { "unit": "calls-per-arm", "count": 275, "cases": 55 },
+      "pilot": { "cases": 8, "repetitions": 1 }
+    },
+    "E4abl": {
+      "title": "Prompt-Ablation",
+      "level": "lab-counterfactual",
+      "runner": "judge",
+      "adapter": "runners/run_judge_extension.mjs",
+      "corpus": "rule-evasion",
+      "expected": { "unit": "calls", "count": 825, "arms": 3 },
+      "pilot": { "cases": 8, "repetitions": 1 }
+    },
+    "E4aeg": {
+      "title": "Judge extern",
+      "previousId": "E8.2",
+      "level": "lab",
+      "runner": "judge",
+      "adapter": "runners/run_aegish_judge.mjs",
+      "corpus": "aegish",
+      "expected": { "unit": "calls", "count": 3459, "cases": 1113 },
+      "pilot": { "cases": 6, "repetitions": 1 }
+    },
+    "E5": {
+      "title": "Live End-to-End",
+      "level": "live",
+      "runner": "live",
+      "adapter": "runners/run_live.sh",
+      "corpus": "live",
+      "configs": ["C0", "C1", "C2", "C3"],
+      "expected": { "unit": "runs", "count": 580, "balanced": 520 },
+      "pilot": { "cases": 4, "repetitions": 1 }
+    },
+    "E5aeg": {
+      "title": "Live extern benigne",
+      "previousId": "E5ext",
+      "level": "live",
+      "runner": "live",
+      "adapter": "runners/run_e5ext.sh",
+      "corpus": "aegish-live",
+      "configs": ["C0", "C1", "C2", "C3"],
+      "expected": { "unit": "runs", "count": 720, "cases": 60 },
+      "pilot": { "cases": 6, "repetitions": 1 }
+    },
+    "E6a": {
+      "title": "Approval-Lifecycle",
+      "level": "live",
+      "runner": "approval",
+      "adapter": "runners/run_e6.sh",
+      "corpus": "live",
+      "expected": { "unit": "runs", "count": 20 },
+      "pilot": { "repetitions": 1 }
+    },
+    "E6b": {
+      "title": "Approval über Core-exec",
+      "level": "live",
+      "runner": "approval",
+      "adapter": "runners/run_e6b.sh",
+      "corpus": "approval",
+      "expected": { "unit": "runs", "count": 290 },
+      "pilot": { "cases": 5, "repetitions": 1 }
+    },
+    "E7": {
+      "title": "Trade-off-Synthese",
+      "level": "derived",
+      "runner": "analysis",
+      "derived": true,
+      "dependsOn": [
+        "E1", "E1ext", "E1aeg", "E2", "E3", "E4", "E4ext",
+        "E4abl", "E4aeg", "E5", "E5aeg", "E6a", "E6b"
+      ]
+    }
+  }
+}

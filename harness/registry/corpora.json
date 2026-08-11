@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "corpora": {
+    "policy": {
+      "path": "corpora/research/policy_corpus.jsonl",
+      "format": "jsonl",
+      "cases": 116,
+      "origin": "regelabgeleitet",
+      "sha256": "76774d8a80c583a8116ec9c4831c0ecbd93f306c92837827eeae2a0380bb1ffb"
+    },
+    "evasion": {
+      "path": "corpora/research/evasion_corpus.jsonl",
+      "format": "jsonl",
+      "cases": 36,
+      "origin": "regelabgeleitet-obfuskiert",
+      "sha256": "0cefc5637b6adb87060f8b7834a188cfc2c2233ed95b1812e4494efd161dd157"
+    },
+    "judge-core": {
+      "paths": [
+        "corpora/research/policy_corpus.jsonl",
+        "corpora/research/evasion_corpus.jsonl"
+      ],
+      "format": "jsonl-composite",
+      "cases": 152,
+      "origin": "regelabgeleitete E1-und-E2-Vereinigung für E4",
+      "sha256": {
+        "policy": "76774d8a80c583a8116ec9c4831c0ecbd93f306c92837827eeae2a0380bb1ffb",
+        "evasion": "0cefc5637b6adb87060f8b7834a188cfc2c2233ed95b1812e4494efd161dd157"
+      }
+    },
+    "rule-evasion": {
+      "path": "corpora/research/e1_extension_ruleevasion.jsonl",
+      "format": "jsonl",
+      "cases": 35,
+      "origin": "adversariell-konstruiert",
+      "sha256": "61c8e76b27937aef63a4173a114f6c9475b31658bdc653493494df941fd12c2e"
+    },
+    "live": {
+      "path": "corpora/research/live_corpus.jsonl",
+      "format": "jsonl",
+      "cases": 26,
+      "origin": "regelabgeleitete Live-Suite",
+      "sha256": "9e13e3dec3023515eb4080b0161d0602183c8ad5d8fd721348ccb62722ad96b6"
+    },
+    "approval": {
+      "path": "corpora/research/e6b_corpus.jsonl",
+      "format": "jsonl",
+      "cases": 6,
+      "origin": "Approval-Pfadvarianten",
+      "sha256": "fa6e3188835e301286876f10269963e68c4ccefac735a0c94d9db448dc672e2a"
+    },
+    "aegish": {
+      "paths": [
+        "corpora/research/external/aegish/harmless_commands.json",
+        "corpora/research/external/aegish/gtfobins_commands.json"
+      ],
+      "format": "aegish-json",
+      "cases": 1172,
+      "origin": "externer eingefrorener aegish-Snapshot",
+      "sha256": {
+        "harmless": "6f8358e5c8fd898ab47ea7a72045b7d10fa31bf7d643976c5aeb447fc1ce7792",
+        "harmful": "a91f53cbff9acf78405e38050ff4aa6057662e8cabfedcb67e5ad37c8a5b4bf4"
+      }
+    },
+    "aegish-live": {
+      "path": "corpora/research/e5ext_aegish_live.jsonl",
+      "format": "jsonl",
+      "cases": 60,
+      "origin": "vorab ausgewählte benigne aegish-Live-Teilmenge",
+      "sha256": "25ea5fe851fc5cd3ab7402f747b942fee6376e389965f286be7657bf9eeea2f2"
+    }
+  }
+}

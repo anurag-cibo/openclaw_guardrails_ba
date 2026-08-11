@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "status": "target-preflight-validated",
+  "controlRuntime": {
+    "baseImage": "node:20.19.0-bookworm-slim",
+    "baseImageDigest": "sha256:5cfa999422613d3b34f766cbb814d964cbfcb76aaf3607e805da21cccb352bac",
+    "builtImage": "guardrail-harness-runtime:dev",
+    "builtImageId": "sha256:c5553f4603592dfa9cf74d8ed55ef11ed0b3ed4f5734b93c8f10fee23dcebc7a",
+    "targetImportedImageId": "sha256:ebf5ed2bcb91549dd6e310eca3e9480d0ac60fe746132f466c360425a8afd38f",
+    "identityAuthority": "Primär ist der SHA-256 des Exportarchivs; Docker .Id kann zwischen Docker-Desktop- und Linux-Image-Store abweichen.",
+    "platform": "linux/amd64",
+    "node": "20.19.0",
+    "python": "3.11.2 (Debian Bookworm python3)",
+    "purpose": "Kontrollschicht, historische Python-Standardbibliotheksauswertung und Offline-Runner"
+  },
+  "localValidation": {
+    "date": "2026-08-10",
+    "imageCreatedAt": "2026-08-10T01:24:59.832872861Z",
+    "platform": "linux/amd64 via Docker Desktop",
+    "containerDoctorPassed": true,
+    "containerTestsPassed": 50,
+    "exportArchive": "runtime/images/guardrail-harness-images_20260810.tar.gz",
+    "exportBytes": 137383463,
+    "exportSha256": "b7ff40d6745a6587c70a29f48e694178c8e57172f66e9368336f00c07d3086e0",
+    "dockerLoadVerified": true,
+    "targetHostValidated": true,
+    "targetHostValidation": {
+      "date": "2026-08-10",
+      "preflightPassed": true,
+      "platform": "linux/amd64",
+      "importedImageId": "sha256:ebf5ed2bcb91549dd6e310eca3e9480d0ac60fe746132f466c360425a8afd38f",
+      "openclawGatewayRunning": true,
+      "ollamaRunning": true,
+      "model": "qwen3:30b"
+    }
+  },
+  "releaseGate": {
+    "requireBaseDigest": true,
+    "requireBuiltImageId": true,
+    "requireExportSha256": true,
+    "note": "Die lokale Entwicklungs-Runtime ist validiert. Vor einem HAW-Hauptlauf muss das exportierte Archiv per SHA-256 fixiert und dasselbe Image auf dem Zielhost geprüft sein."
+  }
+}

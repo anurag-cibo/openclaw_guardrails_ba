@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "status": "release-candidate-local",
+  "publicationReviewRequired": true,
+  "publicPilot": [
+    "corpora/pilot/policy.jsonl",
+    "corpora/pilot/evasion.jsonl",
+    "corpora/pilot/live.jsonl",
+    "corpora/pilot/approval.jsonl"
+  ],
+  "publicBuilder": "src/tools/build-public-distribution.mjs",
+  "publicCommand": "./bin/harness package-public",
+  "defaultSmokeProfile": "profiles/live-smoke.example.json",
+  "privateRoots": [
+    "corpora/private",
+    "corpora/custom",
+    "profiles/local"
+  ],
+  "internalOnly": [
+    "corpora/research/*.jsonl",
+    "corpora/research/*.json",
+    "corpora/research/external/**/*.json",
+    "reference/e5aeg_archive/results",
+    "docs",
+    "TEMP_KAPITEL4_NOTIZEN.md"
+  ],
+  "note": "Das SCP-Quellarchiv bleibt ein interner Forschungstransfer. Nur das allowlist-basierte guardrail-harness-public-Archiv ist ein oeffentlicher Release-Kandidat."
+}

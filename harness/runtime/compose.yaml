@@ -1,0 +1,22 @@
+services:
+  control:
+    image: guardrail-harness-runtime:dev
+    build:
+      context: ..
+      dockerfile: runtime/Dockerfile
+      args:
+        BASE_IMAGE: node:20.19.0-bookworm-slim@sha256:5cfa999422613d3b34f766cbb814d964cbfcb76aaf3607e805da21cccb352bac
+    working_dir: /workspace
+    user: "${HARNESS_UID:-1000}:${HARNESS_GID:-1000}"
+    environment:
+      HARNESS_RUNTIME: container
+      HARNESS_DATA_ROOT: /harness-data
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ..:/workspace
+      - type: bind
+        source: "${HARNESS_DATA_ROOT:-../corpora}"
+        target: /harness-data
+        read_only: true
+    network_mode: none

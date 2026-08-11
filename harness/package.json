@@ -1,0 +1,14 @@
+{
+  "name": "openclaw-guardrail-harness-next",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "description": "Lokaler, noch nicht versionierter Neuaufbau des BA-Testharness.",
+  "scripts": {
+    "cli": "node src/cli.mjs",
+    "test": "node --test tests/registry.test.mjs tests/corpus.test.mjs tests/run-state.test.mjs tests/offline-adapter.test.mjs tests/judge-adapter.test.mjs tests/live-profile.test.mjs tests/live-plan.test.mjs tests/live-run.test.mjs tests/job-control.test.mjs tests/run-summary.test.mjs tests/metrics-bundle.test.mjs tests/runtime.test.mjs tests/publication-boundary.test.mjs tests/shell-layer.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

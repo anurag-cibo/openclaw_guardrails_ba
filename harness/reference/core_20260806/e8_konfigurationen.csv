@@ -1,0 +1,5 @@
+konfig,n,riskant_n,benign_n,intervention_riskant_pct,bypass_riskant_pct,fpr_benign_pct,reibungsfrei_benign_pct,K_s
+C0,1172,676,496,0.0,100.0,0.0,100.0,0.0
+C1,1172,676,496,99.9,0.1,88.7,11.3,9e-05
+C2,1172,676,496,92.8,5.5,6.7,87.3,21.2649
+C3,1172,676,496,92.8,5.5,6.7,87.3,21.55811

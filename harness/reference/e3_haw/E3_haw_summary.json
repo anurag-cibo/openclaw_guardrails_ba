@@ -1,0 +1,1392 @@
+{
+  "experiment": "E3",
+  "title": "Policy-Latenz auf dem HAW-Zielsystem",
+  "manifest": {
+    "experiment": "E3",
+    "title": "Policy-Latenz auf dem HAW-Zielsystem",
+    "variant": "haw_target_replication",
+    "pilot": false,
+    "guardrail_unchanged": true,
+    "policy_config": {},
+    "workspace_root": "/home/node/.openclaw/workspace",
+    "baseline_plugin_commit": "9219828",
+    "measurement_plugin_commit": "9219828",
+    "measurement_plugin_commit_full": "9219828b9a43681e388335f8db78309c34a42fd2",
+    "hashes": {
+      "policy_js": "8aedb313377f3a07d8d6e600b7b647e7996ad9c09332f3cc9c688f783a24e049",
+      "judge_js": "e0afaa9ee0ae3f7802dc5e9b2ed2b21e25a606b017fee5574755051135746286",
+      "index_js": "ad4f7b1dcdb99a7bfd5b68fddf5b03e12bcbc42e42f98a07901bf871fc9292e0",
+      "corpus": "76774d8a80c583a8116ec9c4831c0ecbd93f306c92837827eeae2a0380bb1ffb",
+      "benchmark": "99bcc72f7b62f0c9d17e0407d13936b4941c94513e904887235531034e4c07df"
+    },
+    "schedule": {
+      "rounds": 5,
+      "iterations_per_command": 3000,
+      "commands": 116,
+      "evaluations_per_round": 348000,
+      "total_evaluations": 1740000,
+      "warmup_calls_per_round": 5000,
+      "fresh_node_process_per_round": true
+    },
+    "runtime": {
+      "node": "v24.14.0",
+      "platform": "linux",
+      "arch": "x64",
+      "kernel_release": "6.8.0-90-generic",
+      "container_hostname": "3310aa3f291d",
+      "cpu_model": "Intel(R) Xeon(R) CPU E5-2680 v4 @ 2.40GHz",
+      "logical_cpus_visible": 16,
+      "total_memory_bytes_visible": 135070224384,
+      "loadavg_at_start": [
+        0.03,
+        0.05,
+        0
+      ],
+      "cgroup_cpu_max": "max 100000",
+      "cgroup_cpuset_effective": "0-15",
+      "gateway_image": "ghcr.io/openclaw/openclaw:latest",
+      "gateway_image_id": "sha256:ac2c41d7122194d32258d1ec61b33079dbc498767ecadcd50849782ad5fcb057",
+      "openclaw_version_context": "2026.5.18",
+      "host_hardware_context": "HAW-Uni-Host / GRID V100S-32Q",
+      "loadavg_latest": [
+        0.75,
+        0.27,
+        0.08
+      ],
+      "loadavg_at_end": [
+        0.75,
+        0.27,
+        0.08
+      ]
+    },
+    "paths": {
+      "output_dir": "<messumgebung>/experiments/results/data/lab/e3/haw",
+      "manifest": "<messumgebung>/experiments/results/data/lab/e3/haw/E3_haw_manifest.json",
+      "corpus": "<messumgebung>/experiments/corpus/policy_corpus.jsonl",
+      "benchmark": "<messumgebung>/experiments/harness/bench_policy_latency.mjs",
+      "guardrail_src": "<messumgebung>/guardrail-plugin/src"
+    },
+    "configuration_signature": "9ee8502a2a64a5ddc7f431afbf7d65f3f7cf14f7a52bdf702b1b0175aafcc21e",
+    "started_at": "2026-08-07T15:44:57.891Z",
+    "completed_at": "2026-08-07T15:46:06.728Z",
+    "completed": true,
+    "completed_rounds": 5,
+    "rounds": [
+      {
+        "round": 1,
+        "file": "<messumgebung>/experiments/results/data/lab/e3/haw/E3_haw_round_01.json",
+        "sha256": "9bc6dfce9ce846ff3af110f6f677732201cc8fd0a4acdd4c087c5fdc34111095",
+        "evaluations": 348000,
+        "node": "v24.14.0",
+        "platform": "linux",
+        "arch": "x64",
+        "overall_self": {
+          "n": 348000,
+          "mean_ms": 0.0353,
+          "p50_ms": 0.033,
+          "p95_ms": 0.05,
+          "p99_ms": 0.067,
+          "max_ms": 3.603,
+          "min_ms": 0.025
+        },
+        "overall_wall": {
+          "n": 348000,
+          "mean_ms": 0.0356,
+          "p50_ms": 0.0337,
+          "p95_ms": 0.0504,
+          "p99_ms": 0.0671,
+          "max_ms": 3.604,
+          "min_ms": 0.0252
+        }
+      },
+      {
+        "round": 2,
+        "file": "<messumgebung>/experiments/results/data/lab/e3/haw/E3_haw_round_02.json",
+        "sha256": "1171b70b86d9a7a16914ab36c4449ad41ea1baf0b3ba5827be620ac3ae685f18",
+        "evaluations": 348000,
+        "node": "v24.14.0",
+        "platform": "linux",
+        "arch": "x64",
+        "overall_self": {
+          "n": 348000,
+          "mean_ms": 0.0388,
+          "p50_ms": 0.037,
+          "p95_ms": 0.053,
+          "p99_ms": 0.072,
+          "max_ms": 3.429,
+          "min_ms": 0.028
+        },
+        "overall_wall": {
+          "n": 348000,
+          "mean_ms": 0.0392,
+          "p50_ms": 0.0373,
+          "p95_ms": 0.0539,
+          "p99_ms": 0.0726,
+          "max_ms": 3.4296,
+          "min_ms": 0.028
+        }
+      },
+      {
+        "round": 3,
+        "file": "<messumgebung>/experiments/results/data/lab/e3/haw/E3_haw_round_03.json",
+        "sha256": "b5af22852ffd8641033fecc614d155d96f221037d72db63c7df88c3aa9452a34",
+        "evaluations": 348000,
+        "node": "v24.14.0",
+        "platform": "linux",
+        "arch": "x64",
+        "overall_self": {
+          "n": 348000,
+          "mean_ms": 0.0355,
+          "p50_ms": 0.034,
+          "p95_ms": 0.049,
+          "p99_ms": 0.066,
+          "max_ms": 3.157,
+          "min_ms": 0.026
+        },
+        "overall_wall": {
+          "n": 348000,
+          "mean_ms": 0.0359,
+          "p50_ms": 0.0342,
+          "p95_ms": 0.05,
+          "p99_ms": 0.0668,
+          "max_ms": 3.1573,
+          "min_ms": 0.0262
+        }
+      },
+      {
+        "round": 4,
+        "file": "<messumgebung>/experiments/results/data/lab/e3/haw/E3_haw_round_04.json",
+        "sha256": "250024c3ce770bcd7c7b670ce3b0f98e8da21deb2f6a4382e60a76622fb64b5c",
+        "evaluations": 348000,
+        "node": "v24.14.0",
+        "platform": "linux",
+        "arch": "x64",
+        "overall_self": {
+          "n": 348000,
+          "mean_ms": 0.0344,
+          "p50_ms": 0.032,
+          "p95_ms": 0.05,
+          "p99_ms": 0.069,
+          "max_ms": 3.381,
+          "min_ms": 0.024
+        },
+        "overall_wall": {
+          "n": 348000,
+          "mean_ms": 0.0348,
+          "p50_ms": 0.0326,
+          "p95_ms": 0.0506,
+          "p99_ms": 0.0699,
+          "max_ms": 3.3821,
+          "min_ms": 0.0241
+        }
+      },
+      {
+        "round": 5,
+        "file": "<messumgebung>/experiments/results/data/lab/e3/haw/E3_haw_round_05.json",
+        "sha256": "445181e816e1805d2aaa9fe481b2fee9ae7de76422d4c3bae0d4c99795d40927",
+        "evaluations": 348000,
+        "node": "v24.14.0",
+        "platform": "linux",
+        "arch": "x64",
+        "overall_self": {
+          "n": 348000,
+          "mean_ms": 0.0356,
+          "p50_ms": 0.034,
+          "p95_ms": 0.05,
+          "p99_ms": 0.067,
+          "max_ms": 3.213,
+          "min_ms": 0.025
+        },
+        "overall_wall": {
+          "n": 348000,
+          "mean_ms": 0.036,
+          "p50_ms": 0.0342,
+          "p95_ms": 0.0504,
+          "p99_ms": 0.0679,
+          "max_ms": 3.2134,
+          "min_ms": 0.0258
+        }
+      }
+    ],
+    "observed_total_evaluations": 1740000
+  },
+  "validation": {
+    "rounds": 5,
+    "evaluations_per_round": 348000,
+    "evaluations_total": 1740000,
+    "round_hashes_verified": true,
+    "guardrail_hashes_frozen": true
+  },
+  "aggregate": {
+    "overall_self": {
+      "rounds": 5,
+      "evaluations_per_round": 348000,
+      "evaluations_total": 1740000,
+      "mean_ms": {
+        "round_values": [
+          0.0353,
+          0.0388,
+          0.0355,
+          0.0344,
+          0.0356
+        ],
+        "mean_across_rounds": 0.035919999999999994,
+        "median_across_rounds": 0.0355,
+        "min_across_rounds": 0.0344,
+        "max_across_rounds": 0.0388,
+        "stdev_across_rounds": 0.0016783920876839247
+      },
+      "p50_ms": {
+        "round_values": [
+          0.033,
+          0.037,
+          0.034,
+          0.032,
+          0.034
+        ],
+        "mean_across_rounds": 0.034,
+        "median_across_rounds": 0.034,
+        "min_across_rounds": 0.032,
+        "max_across_rounds": 0.037,
+        "stdev_across_rounds": 0.0018708286933869695
+      },
+      "p95_ms": {
+        "round_values": [
+          0.05,
+          0.053,
+          0.049,
+          0.05,
+          0.05
+        ],
+        "mean_across_rounds": 0.0504,
+        "median_across_rounds": 0.05,
+        "min_across_rounds": 0.049,
+        "max_across_rounds": 0.053,
+        "stdev_across_rounds": 0.0015165750888103085
+      },
+      "p99_ms": {
+        "round_values": [
+          0.067,
+          0.072,
+          0.066,
+          0.069,
+          0.067
+        ],
+        "mean_across_rounds": 0.06820000000000001,
+        "median_across_rounds": 0.067,
+        "min_across_rounds": 0.066,
+        "max_across_rounds": 0.072,
+        "stdev_across_rounds": 0.002387467277262661
+      },
+      "min_ms": {
+        "round_values": [
+          0.025,
+          0.028,
+          0.026,
+          0.024,
+          0.025
+        ],
+        "mean_across_rounds": 0.0256,
+        "median_across_rounds": 0.025,
+        "min_across_rounds": 0.024,
+        "max_across_rounds": 0.028,
+        "stdev_across_rounds": 0.0015165750888103098
+      },
+      "max_ms": {
+        "round_values": [
+          3.603,
+          3.429,
+          3.157,
+          3.381,
+          3.213
+        ],
+        "mean_across_rounds": 3.3566000000000003,
+        "median_across_rounds": 3.381,
+        "min_across_rounds": 3.157,
+        "max_across_rounds": 3.603,
+        "stdev_across_rounds": 0.17819315362830304
+      },
+      "pooled_mean_ms": 0.035919999999999994,
+      "global_min_ms": 0.024,
+      "global_max_ms": 3.603
+    },
+    "overall_wall": {
+      "rounds": 5,
+      "evaluations_per_round": 348000,
+      "evaluations_total": 1740000,
+      "mean_ms": {
+        "round_values": [
+          0.0356,
+          0.0392,
+          0.0359,
+          0.0348,
+          0.036
+        ],
+        "mean_across_rounds": 0.0363,
+        "median_across_rounds": 0.0359,
+        "min_across_rounds": 0.0348,
+        "max_across_rounds": 0.0392,
+        "stdev_across_rounds": 0.0016881943016134133
+      },
+      "p50_ms": {
+        "round_values": [
+          0.0337,
+          0.0373,
+          0.0342,
+          0.0326,
+          0.0342
+        ],
+        "mean_across_rounds": 0.0344,
+        "median_across_rounds": 0.0342,
+        "min_across_rounds": 0.0326,
+        "max_across_rounds": 0.0373,
+        "stdev_across_rounds": 0.0017478558292948541
+      },
+      "p95_ms": {
+        "round_values": [
+          0.0504,
+          0.0539,
+          0.05,
+          0.0506,
+          0.0504
+        ],
+        "mean_across_rounds": 0.05106000000000001,
+        "median_across_rounds": 0.0504,
+        "min_across_rounds": 0.05,
+        "max_across_rounds": 0.0539,
+        "stdev_across_rounds": 0.0016024980499208114
+      },
+      "p99_ms": {
+        "round_values": [
+          0.0671,
+          0.0726,
+          0.0668,
+          0.0699,
+          0.0679
+        ],
+        "mean_across_rounds": 0.06886,
+        "median_across_rounds": 0.0679,
+        "min_across_rounds": 0.0668,
+        "max_across_rounds": 0.0726,
+        "stdev_across_rounds": 0.002415160450156468
+      },
+      "min_ms": {
+        "round_values": [
+          0.0252,
+          0.028,
+          0.0262,
+          0.0241,
+          0.0258
+        ],
+        "mean_across_rounds": 0.02586,
+        "median_across_rounds": 0.0258,
+        "min_across_rounds": 0.0241,
+        "max_across_rounds": 0.028,
+        "stdev_across_rounds": 0.001434573107234344
+      },
+      "max_ms": {
+        "round_values": [
+          3.604,
+          3.4296,
+          3.1573,
+          3.3821,
+          3.2134
+        ],
+        "mean_across_rounds": 3.3572800000000003,
+        "median_across_rounds": 3.3821,
+        "min_across_rounds": 3.1573,
+        "max_across_rounds": 3.604,
+        "stdev_across_rounds": 0.17847298675149692
+      },
+      "pooled_mean_ms": 0.0363,
+      "global_min_ms": 0.0241,
+      "global_max_ms": 3.604
+    },
+    "by_class_self": {
+      "benign_unlisted": {
+        "rounds": 5,
+        "evaluations_per_round": 24000,
+        "evaluations_total": 120000,
+        "mean_ms": {
+          "round_values": [
+            0.032,
+            0.0361,
+            0.0333,
+            0.0319,
+            0.0325
+          ],
+          "mean_across_rounds": 0.03316,
+          "median_across_rounds": 0.0325,
+          "min_across_rounds": 0.0319,
+          "max_across_rounds": 0.0361,
+          "stdev_across_rounds": 0.0017343586710943043
+        },
+        "p50_ms": {
+          "round_values": [
+            0.029,
+            0.033,
+            0.031,
+            0.029,
+            0.03
+          ],
+          "mean_across_rounds": 0.0304,
+          "median_across_rounds": 0.03,
+          "min_across_rounds": 0.029,
+          "max_across_rounds": 0.033,
+          "stdev_across_rounds": 0.001673320053068151
+        },
+        "p95_ms": {
+          "round_values": [
+            0.046,
+            0.055,
+            0.047,
+            0.047,
+            0.047
+          ],
+          "mean_across_rounds": 0.0484,
+          "median_across_rounds": 0.047,
+          "min_across_rounds": 0.046,
+          "max_across_rounds": 0.055,
+          "stdev_across_rounds": 0.003714835124201342
+        },
+        "p99_ms": {
+          "round_values": [
+            0.062,
+            0.076,
+            0.064,
+            0.066,
+            0.064
+          ],
+          "mean_across_rounds": 0.0664,
+          "median_across_rounds": 0.064,
+          "min_across_rounds": 0.062,
+          "max_across_rounds": 0.076,
+          "stdev_across_rounds": 0.005549774770204642
+        },
+        "min_ms": {
+          "round_values": [
+            0.025,
+            0.028,
+            0.026,
+            0.024,
+            0.025
+          ],
+          "mean_across_rounds": 0.0256,
+          "median_across_rounds": 0.025,
+          "min_across_rounds": 0.024,
+          "max_across_rounds": 0.028,
+          "stdev_across_rounds": 0.0015165750888103098
+        },
+        "max_ms": {
+          "round_values": [
+            2.409,
+            1.858,
+            2.064,
+            2.064,
+            1.762
+          ],
+          "mean_across_rounds": 2.0314,
+          "median_across_rounds": 2.064,
+          "min_across_rounds": 1.762,
+          "max_across_rounds": 2.409,
+          "stdev_across_rounds": 0.24867207322093882
+        },
+        "pooled_mean_ms": 0.03316,
+        "global_min_ms": 0.024,
+        "global_max_ms": 2.409
+      },
+      "critical_system": {
+        "rounds": 5,
+        "evaluations_per_round": 33000,
+        "evaluations_total": 165000,
+        "mean_ms": {
+          "round_values": [
+            0.0358,
+            0.0387,
+            0.0354,
+            0.0346,
+            0.0356
+          ],
+          "mean_across_rounds": 0.036019999999999996,
+          "median_across_rounds": 0.0356,
+          "min_across_rounds": 0.0346,
+          "max_across_rounds": 0.0387,
+          "stdev_across_rounds": 0.0015658863304850701
+        },
+        "p50_ms": {
+          "round_values": [
+            0.033,
+            0.037,
+            0.033,
+            0.032,
+            0.033
+          ],
+          "mean_across_rounds": 0.033600000000000005,
+          "median_across_rounds": 0.033,
+          "min_across_rounds": 0.032,
+          "max_across_rounds": 0.037,
+          "stdev_across_rounds": 0.0019493588689617914
+        },
+        "p95_ms": {
+          "round_values": [
+            0.053,
+            0.052,
+            0.048,
+            0.05,
+            0.049
+          ],
+          "mean_across_rounds": 0.0504,
+          "median_across_rounds": 0.05,
+          "min_across_rounds": 0.048,
+          "max_across_rounds": 0.053,
+          "stdev_across_rounds": 0.0020736441353327705
+        },
+        "p99_ms": {
+          "round_values": [
+            0.07,
+            0.068,
+            0.062,
+            0.071,
+            0.063
+          ],
+          "mean_across_rounds": 0.0668,
+          "median_across_rounds": 0.068,
+          "min_across_rounds": 0.062,
+          "max_across_rounds": 0.071,
+          "stdev_across_rounds": 0.00408656334834051
+        },
+        "min_ms": {
+          "round_values": [
+            0.025,
+            0.028,
+            0.026,
+            0.024,
+            0.026
+          ],
+          "mean_across_rounds": 0.0258,
+          "median_across_rounds": 0.026,
+          "min_across_rounds": 0.024,
+          "max_across_rounds": 0.028,
+          "stdev_across_rounds": 0.0014832396974191323
+        },
+        "max_ms": {
+          "round_values": [
+            1.242,
+            0.584,
+            0.468,
+            0.449,
+            0.524
+          ],
+          "mean_across_rounds": 0.6534,
+          "median_across_rounds": 0.524,
+          "min_across_rounds": 0.449,
+          "max_across_rounds": 1.242,
+          "stdev_across_rounds": 0.3332278499765588
+        },
+        "pooled_mean_ms": 0.036019999999999996,
+        "global_min_ms": 0.024,
+        "global_max_ms": 1.242
+      },
+      "destructive_high": {
+        "rounds": 5,
+        "evaluations_per_round": 54000,
+        "evaluations_total": 270000,
+        "mean_ms": {
+          "round_values": [
+            0.0343,
+            0.0376,
+            0.0346,
+            0.0325,
+            0.0347
+          ],
+          "mean_across_rounds": 0.03474,
+          "median_across_rounds": 0.0346,
+          "min_across_rounds": 0.0325,
+          "max_across_rounds": 0.0376,
+          "stdev_across_rounds": 0.0018311198759229286
+        },
+        "p50_ms": {
+          "round_values": [
+            0.032,
+            0.036,
+            0.033,
+            0.031,
+            0.033
+          ],
+          "mean_across_rounds": 0.033,
+          "median_across_rounds": 0.033,
+          "min_across_rounds": 0.031,
+          "max_across_rounds": 0.036,
+          "stdev_across_rounds": 0.0018708286933869695
+        },
+        "p95_ms": {
+          "round_values": [
+            0.049,
+            0.05,
+            0.049,
+            0.048,
+            0.047
+          ],
+          "mean_across_rounds": 0.0486,
+          "median_across_rounds": 0.049,
+          "min_across_rounds": 0.047,
+          "max_across_rounds": 0.05,
+          "stdev_across_rounds": 0.001140175425099139
+        },
+        "p99_ms": {
+          "round_values": [
+            0.064,
+            0.065,
+            0.068,
+            0.061,
+            0.061
+          ],
+          "mean_across_rounds": 0.0638,
+          "median_across_rounds": 0.064,
+          "min_across_rounds": 0.061,
+          "max_across_rounds": 0.068,
+          "stdev_across_rounds": 0.0029495762407505278
+        },
+        "min_ms": {
+          "round_values": [
+            0.026,
+            0.03,
+            0.027,
+            0.025,
+            0.027
+          ],
+          "mean_across_rounds": 0.027000000000000003,
+          "median_across_rounds": 0.027,
+          "min_across_rounds": 0.025,
+          "max_across_rounds": 0.03,
+          "stdev_across_rounds": 0.00187082869338697
+        },
+        "max_ms": {
+          "round_values": [
+            3.603,
+            3.429,
+            3.157,
+            3.381,
+            3.213
+          ],
+          "mean_across_rounds": 3.3566000000000003,
+          "median_across_rounds": 3.381,
+          "min_across_rounds": 3.157,
+          "max_across_rounds": 3.603,
+          "stdev_across_rounds": 0.17819315362830304
+        },
+        "pooled_mean_ms": 0.03474,
+        "global_min_ms": 0.025,
+        "global_max_ms": 3.603
+      },
+      "destructive_limited": {
+        "rounds": 5,
+        "evaluations_per_round": 24000,
+        "evaluations_total": 120000,
+        "mean_ms": {
+          "round_values": [
+            0.039,
+            0.0408,
+            0.0378,
+            0.0362,
+            0.0383
+          ],
+          "mean_across_rounds": 0.038419999999999996,
+          "median_across_rounds": 0.0383,
+          "min_across_rounds": 0.0362,
+          "max_across_rounds": 0.0408,
+          "stdev_across_rounds": 0.0016828547174370103
+        },
+        "p50_ms": {
+          "round_values": [
+            0.035,
+            0.038,
+            0.035,
+            0.033,
+            0.035
+          ],
+          "mean_across_rounds": 0.0352,
+          "median_across_rounds": 0.035,
+          "min_across_rounds": 0.033,
+          "max_across_rounds": 0.038,
+          "stdev_across_rounds": 0.0017888543819998307
+        },
+        "p95_ms": {
+          "round_values": [
+            0.057,
+            0.054,
+            0.052,
+            0.051,
+            0.051
+          ],
+          "mean_across_rounds": 0.053000000000000005,
+          "median_across_rounds": 0.052,
+          "min_across_rounds": 0.051,
+          "max_across_rounds": 0.057,
+          "stdev_across_rounds": 0.002549509756796395
+        },
+        "p99_ms": {
+          "round_values": [
+            0.076,
+            0.071,
+            0.068,
+            0.067,
+            0.068
+          ],
+          "mean_across_rounds": 0.06999999999999999,
+          "median_across_rounds": 0.068,
+          "min_across_rounds": 0.067,
+          "max_across_rounds": 0.076,
+          "stdev_across_rounds": 0.0036742346141747637
+        },
+        "min_ms": {
+          "round_values": [
+            0.03,
+            0.034,
+            0.031,
+            0.029,
+            0.032
+          ],
+          "mean_across_rounds": 0.0312,
+          "median_across_rounds": 0.031,
+          "min_across_rounds": 0.029,
+          "max_across_rounds": 0.034,
+          "stdev_across_rounds": 0.0019235384061671351
+        },
+        "max_ms": {
+          "round_values": [
+            3.251,
+            3.141,
+            2.838,
+            3.226,
+            3.023
+          ],
+          "mean_across_rounds": 3.0957999999999997,
+          "median_across_rounds": 3.141,
+          "min_across_rounds": 2.838,
+          "max_across_rounds": 3.251,
+          "stdev_across_rounds": 0.1694423205695672
+        },
+        "pooled_mean_ms": 0.038419999999999996,
+        "global_min_ms": 0.029,
+        "global_max_ms": 3.251
+      },
+      "local_mutation": {
+        "rounds": 5,
+        "evaluations_per_round": 30000,
+        "evaluations_total": 150000,
+        "mean_ms": {
+          "round_values": [
+            0.0367,
+            0.0407,
+            0.0368,
+            0.0354,
+            0.0372
+          ],
+          "mean_across_rounds": 0.03736,
+          "median_across_rounds": 0.0368,
+          "min_across_rounds": 0.0354,
+          "max_across_rounds": 0.0407,
+          "stdev_across_rounds": 0.0019856988694160046
+        },
+        "p50_ms": {
+          "round_values": [
+            0.036,
+            0.039,
+            0.036,
+            0.034,
+            0.037
+          ],
+          "mean_across_rounds": 0.0364,
+          "median_across_rounds": 0.036,
+          "min_across_rounds": 0.034,
+          "max_across_rounds": 0.039,
+          "stdev_across_rounds": 0.0018165902124584942
+        },
+        "p95_ms": {
+          "round_values": [
+            0.051,
+            0.055,
+            0.049,
+            0.053,
+            0.052
+          ],
+          "mean_across_rounds": 0.052000000000000005,
+          "median_across_rounds": 0.052,
+          "min_across_rounds": 0.049,
+          "max_across_rounds": 0.055,
+          "stdev_across_rounds": 0.0022360679774997894
+        },
+        "p99_ms": {
+          "round_values": [
+            0.065,
+            0.073,
+            0.062,
+            0.072,
+            0.07
+          ],
+          "mean_across_rounds": 0.06839999999999999,
+          "median_across_rounds": 0.07,
+          "min_across_rounds": 0.062,
+          "max_across_rounds": 0.073,
+          "stdev_across_rounds": 0.004722287581247036
+        },
+        "min_ms": {
+          "round_values": [
+            0.027,
+            0.031,
+            0.028,
+            0.026,
+            0.027
+          ],
+          "mean_across_rounds": 0.027800000000000002,
+          "median_across_rounds": 0.027,
+          "min_across_rounds": 0.026,
+          "max_across_rounds": 0.031,
+          "stdev_across_rounds": 0.0019235384061671347
+        },
+        "max_ms": {
+          "round_values": [
+            0.516,
+            0.425,
+            0.432,
+            0.438,
+            0.499
+          ],
+          "mean_across_rounds": 0.462,
+          "median_across_rounds": 0.438,
+          "min_across_rounds": 0.425,
+          "max_across_rounds": 0.516,
+          "stdev_across_rounds": 0.04221966366516911
+        },
+        "pooled_mean_ms": 0.03736,
+        "global_min_ms": 0.026,
+        "global_max_ms": 0.516
+      },
+      "network_exfiltration": {
+        "rounds": 5,
+        "evaluations_per_round": 24000,
+        "evaluations_total": 120000,
+        "mean_ms": {
+          "round_values": [
+            0.0395,
+            0.0445,
+            0.0401,
+            0.0399,
+            0.0402
+          ],
+          "mean_across_rounds": 0.04084,
+          "median_across_rounds": 0.0401,
+          "min_across_rounds": 0.0395,
+          "max_across_rounds": 0.0445,
+          "stdev_across_rounds": 0.0020634921855921815
+        },
+        "p50_ms": {
+          "round_values": [
+            0.038,
+            0.041,
+            0.038,
+            0.038,
+            0.038
+          ],
+          "mean_across_rounds": 0.0386,
+          "median_across_rounds": 0.038,
+          "min_across_rounds": 0.038,
+          "max_across_rounds": 0.041,
+          "stdev_across_rounds": 0.001341640786499875
+        },
+        "p95_ms": {
+          "round_values": [
+            0.053,
+            0.062,
+            0.056,
+            0.055,
+            0.055
+          ],
+          "mean_across_rounds": 0.05620000000000001,
+          "median_across_rounds": 0.055,
+          "min_across_rounds": 0.053,
+          "max_across_rounds": 0.062,
+          "stdev_across_rounds": 0.003420526275297414
+        },
+        "p99_ms": {
+          "round_values": [
+            0.069,
+            0.085,
+            0.076,
+            0.071,
+            0.072
+          ],
+          "mean_across_rounds": 0.0746,
+          "median_across_rounds": 0.072,
+          "min_across_rounds": 0.069,
+          "max_across_rounds": 0.085,
+          "stdev_across_rounds": 0.006348228099241554
+        },
+        "min_ms": {
+          "round_values": [
+            0.032,
+            0.035,
+            0.033,
+            0.031,
+            0.032
+          ],
+          "mean_across_rounds": 0.032600000000000004,
+          "median_across_rounds": 0.032,
+          "min_across_rounds": 0.031,
+          "max_across_rounds": 0.035,
+          "stdev_across_rounds": 0.0015165750888103114
+        },
+        "max_ms": {
+          "round_values": [
+            0.524,
+            1.177,
+            0.688,
+            0.452,
+            0.458
+          ],
+          "mean_across_rounds": 0.6597999999999999,
+          "median_across_rounds": 0.524,
+          "min_across_rounds": 0.452,
+          "max_across_rounds": 1.177,
+          "stdev_across_rounds": 0.3043997371877972
+        },
+        "pooled_mean_ms": 0.04084,
+        "global_min_ms": 0.031,
+        "global_max_ms": 1.177
+      },
+      "opaque_executor": {
+        "rounds": 5,
+        "evaluations_per_round": 42000,
+        "evaluations_total": 210000,
+        "mean_ms": {
+          "round_values": [
+            0.0342,
+            0.038,
+            0.0344,
+            0.0344,
+            0.0356
+          ],
+          "mean_across_rounds": 0.035320000000000004,
+          "median_across_rounds": 0.0344,
+          "min_across_rounds": 0.0342,
+          "max_across_rounds": 0.038,
+          "stdev_across_rounds": 0.001597498043817268
+        },
+        "p50_ms": {
+          "round_values": [
+            0.033,
+            0.037,
+            0.034,
+            0.033,
+            0.034
+          ],
+          "mean_across_rounds": 0.0342,
+          "median_across_rounds": 0.034,
+          "min_across_rounds": 0.033,
+          "max_across_rounds": 0.037,
+          "stdev_across_rounds": 0.001643167672515497
+        },
+        "p95_ms": {
+          "round_values": [
+            0.046,
+            0.052,
+            0.047,
+            0.05,
+            0.051
+          ],
+          "mean_across_rounds": 0.0492,
+          "median_across_rounds": 0.05,
+          "min_across_rounds": 0.046,
+          "max_across_rounds": 0.052,
+          "stdev_across_rounds": 0.002588435821108956
+        },
+        "p99_ms": {
+          "round_values": [
+            0.059,
+            0.067,
+            0.06,
+            0.066,
+            0.067
+          ],
+          "mean_across_rounds": 0.0638,
+          "median_across_rounds": 0.066,
+          "min_across_rounds": 0.059,
+          "max_across_rounds": 0.067,
+          "stdev_across_rounds": 0.003962322551231794
+        },
+        "min_ms": {
+          "round_values": [
+            0.025,
+            0.028,
+            0.026,
+            0.025,
+            0.026
+          ],
+          "mean_across_rounds": 0.026000000000000002,
+          "median_across_rounds": 0.026,
+          "min_across_rounds": 0.025,
+          "max_across_rounds": 0.028,
+          "stdev_across_rounds": 0.0012247448713915887
+        },
+        "max_ms": {
+          "round_values": [
+            1.23,
+            0.452,
+            0.584,
+            0.617,
+            0.501
+          ],
+          "mean_across_rounds": 0.6768,
+          "median_across_rounds": 0.584,
+          "min_across_rounds": 0.452,
+          "max_across_rounds": 1.23,
+          "stdev_across_rounds": 0.31609286610108744
+        },
+        "pooled_mean_ms": 0.035320000000000004,
+        "global_min_ms": 0.025,
+        "global_max_ms": 1.23
+      },
+      "read_outside_workspace": {
+        "rounds": 5,
+        "evaluations_per_round": 27000,
+        "evaluations_total": 135000,
+        "mean_ms": {
+          "round_values": [
+            0.0334,
+            0.0361,
+            0.0329,
+            0.0331,
+            0.0327
+          ],
+          "mean_across_rounds": 0.033639999999999996,
+          "median_across_rounds": 0.0331,
+          "min_across_rounds": 0.0327,
+          "max_across_rounds": 0.0361,
+          "stdev_across_rounds": 0.0013992855319769448
+        },
+        "p50_ms": {
+          "round_values": [
+            0.03,
+            0.033,
+            0.03,
+            0.03,
+            0.03
+          ],
+          "mean_across_rounds": 0.0306,
+          "median_across_rounds": 0.03,
+          "min_across_rounds": 0.03,
+          "max_across_rounds": 0.033,
+          "stdev_across_rounds": 0.001341640786499875
+        },
+        "p95_ms": {
+          "round_values": [
+            0.048,
+            0.05,
+            0.046,
+            0.049,
+            0.046
+          ],
+          "mean_across_rounds": 0.047799999999999995,
+          "median_across_rounds": 0.048,
+          "min_across_rounds": 0.046,
+          "max_across_rounds": 0.05,
+          "stdev_across_rounds": 0.0017888543819998333
+        },
+        "p99_ms": {
+          "round_values": [
+            0.064,
+            0.064,
+            0.061,
+            0.08,
+            0.059
+          ],
+          "mean_across_rounds": 0.0656,
+          "median_across_rounds": 0.064,
+          "min_across_rounds": 0.059,
+          "max_across_rounds": 0.08,
+          "stdev_across_rounds": 0.008324662155306967
+        },
+        "min_ms": {
+          "round_values": [
+            0.026,
+            0.03,
+            0.027,
+            0.025,
+            0.026
+          ],
+          "mean_across_rounds": 0.0268,
+          "median_across_rounds": 0.026,
+          "min_across_rounds": 0.025,
+          "max_across_rounds": 0.03,
+          "stdev_across_rounds": 0.001923538406167134
+        },
+        "max_ms": {
+          "round_values": [
+            0.412,
+            0.454,
+            0.416,
+            0.583,
+            0.415
+          ],
+          "mean_across_rounds": 0.45599999999999996,
+          "median_across_rounds": 0.416,
+          "min_across_rounds": 0.412,
+          "max_across_rounds": 0.583,
+          "stdev_across_rounds": 0.07305819598101228
+        },
+        "pooled_mean_ms": 0.033639999999999996,
+        "global_min_ms": 0.025,
+        "global_max_ms": 0.583
+      },
+      "safe_readonly": {
+        "rounds": 5,
+        "evaluations_per_round": 54000,
+        "evaluations_total": 270000,
+        "mean_ms": {
+          "round_values": [
+            0.0356,
+            0.0392,
+            0.0364,
+            0.0357,
+            0.0364
+          ],
+          "mean_across_rounds": 0.036660000000000005,
+          "median_across_rounds": 0.0364,
+          "min_across_rounds": 0.0356,
+          "max_across_rounds": 0.0392,
+          "stdev_across_rounds": 0.001469013274276307
+        },
+        "p50_ms": {
+          "round_values": [
+            0.034,
+            0.037,
+            0.035,
+            0.034,
+            0.033
+          ],
+          "mean_across_rounds": 0.034600000000000006,
+          "median_across_rounds": 0.034,
+          "min_across_rounds": 0.033,
+          "max_across_rounds": 0.037,
+          "stdev_across_rounds": 0.0015165750888103088
+        },
+        "p95_ms": {
+          "round_values": [
+            0.051,
+            0.055,
+            0.051,
+            0.052,
+            0.052
+          ],
+          "mean_across_rounds": 0.0522,
+          "median_across_rounds": 0.052,
+          "min_across_rounds": 0.051,
+          "max_across_rounds": 0.055,
+          "stdev_across_rounds": 0.0016431676725154997
+        },
+        "p99_ms": {
+          "round_values": [
+            0.07,
+            0.079,
+            0.071,
+            0.076,
+            0.077
+          ],
+          "mean_across_rounds": 0.0746,
+          "median_across_rounds": 0.076,
+          "min_across_rounds": 0.07,
+          "max_across_rounds": 0.079,
+          "stdev_across_rounds": 0.003911521443121588
+        },
+        "min_ms": {
+          "round_values": [
+            0.026,
+            0.028,
+            0.027,
+            0.025,
+            0.027
+          ],
+          "mean_across_rounds": 0.026600000000000002,
+          "median_across_rounds": 0.027,
+          "min_across_rounds": 0.025,
+          "max_across_rounds": 0.028,
+          "stdev_across_rounds": 0.0011401754250991377
+        },
+        "max_ms": {
+          "round_values": [
+            1.1,
+            2.268,
+            0.917,
+            1.744,
+            2.208
+          ],
+          "mean_across_rounds": 1.6474,
+          "median_across_rounds": 1.744,
+          "min_across_rounds": 0.917,
+          "max_across_rounds": 2.268,
+          "stdev_across_rounds": 0.6208621425083026
+        },
+        "pooled_mean_ms": 0.036660000000000005,
+        "global_min_ms": 0.025,
+        "global_max_ms": 2.268
+      },
+      "sensitive_read": {
+        "rounds": 5,
+        "evaluations_per_round": 36000,
+        "evaluations_total": 180000,
+        "mean_ms": {
+          "round_values": [
+            0.034,
+            0.038,
+            0.0342,
+            0.0321,
+            0.0343
+          ],
+          "mean_across_rounds": 0.03452,
+          "median_across_rounds": 0.0342,
+          "min_across_rounds": 0.0321,
+          "max_across_rounds": 0.038,
+          "stdev_across_rounds": 0.002144061566280223
+        },
+        "p50_ms": {
+          "round_values": [
+            0.032,
+            0.036,
+            0.032,
+            0.03,
+            0.032
+          ],
+          "mean_across_rounds": 0.0324,
+          "median_across_rounds": 0.032,
+          "min_across_rounds": 0.03,
+          "max_across_rounds": 0.036,
+          "stdev_across_rounds": 0.0021908902300206636
+        },
+        "p95_ms": {
+          "round_values": [
+            0.048,
+            0.053,
+            0.047,
+            0.047,
+            0.048
+          ],
+          "mean_across_rounds": 0.0486,
+          "median_across_rounds": 0.048,
+          "min_across_rounds": 0.047,
+          "max_across_rounds": 0.053,
+          "stdev_across_rounds": 0.0025099800796022256
+        },
+        "p99_ms": {
+          "round_values": [
+            0.062,
+            0.069,
+            0.063,
+            0.058,
+            0.061
+          ],
+          "mean_across_rounds": 0.0626,
+          "median_across_rounds": 0.062,
+          "min_across_rounds": 0.058,
+          "max_across_rounds": 0.069,
+          "stdev_across_rounds": 0.004037325847637272
+        },
+        "min_ms": {
+          "round_values": [
+            0.028,
+            0.031,
+            0.028,
+            0.026,
+            0.028
+          ],
+          "mean_across_rounds": 0.028200000000000003,
+          "median_across_rounds": 0.028,
+          "min_across_rounds": 0.026,
+          "max_across_rounds": 0.031,
+          "stdev_across_rounds": 0.001788854381999832
+        },
+        "max_ms": {
+          "round_values": [
+            0.597,
+            0.503,
+            0.941,
+            0.435,
+            0.542
+          ],
+          "mean_across_rounds": 0.6035999999999999,
+          "median_across_rounds": 0.542,
+          "min_across_rounds": 0.435,
+          "max_across_rounds": 0.941,
+          "stdev_across_rounds": 0.19762540322539507
+        },
+        "pooled_mean_ms": 0.03452,
+        "global_min_ms": 0.026,
+        "global_max_ms": 0.941
+      }
+    }
+  },
+  "comparison_to_windows": {
+    "baseline_meta": {
+      "iterations_per_command": 3000,
+      "commands": 116,
+      "total_evaluations": 348000,
+      "node": "v20.19.0",
+      "platform": "win32",
+      "arch": "x64",
+      "note": "self = policy-interne durationMs (verdict.durationMs); wall = Wall-Clock pro Aufruf"
+    },
+    "note": "Ratios verwenden fuer Mittelwerte den gepoolten HAW-Mittelwert und fuer Perzentile den Median der fuenf rundenweisen Perzentile. Perzentile werden nicht aus zusammengefassten Rohmessungen rekonstruiert.",
+    "overall_self": {
+      "mean_ms": {
+        "windows": 0.0531,
+        "haw": 0.035919999999999994,
+        "haw_over_windows": 0.6764595103578153,
+        "percent_change": -32.35404896421847
+      },
+      "p50_ms": {
+        "windows": 0.052,
+        "haw": 0.034,
+        "haw_over_windows": 0.653846153846154,
+        "percent_change": -34.615384615384606
+      },
+      "p95_ms": {
+        "windows": 0.061,
+        "haw": 0.05,
+        "haw_over_windows": 0.819672131147541,
+        "percent_change": -18.032786885245898
+      },
+      "p99_ms": {
+        "windows": 0.076,
+        "haw": 0.067,
+        "haw_over_windows": 0.8815789473684211,
+        "percent_change": -11.842105263157887
+      }
+    },
+    "overall_wall": {
+      "mean_ms": {
+        "windows": 0.0539,
+        "haw": 0.0363,
+        "haw_over_windows": 0.673469387755102,
+        "percent_change": -32.6530612244898
+      },
+      "p50_ms": {
+        "windows": 0.0528,
+        "haw": 0.0342,
+        "haw_over_windows": 0.6477272727272727,
+        "percent_change": -35.22727272727273
+      },
+      "p95_ms": {
+        "windows": 0.0617,
+        "haw": 0.0504,
+        "haw_over_windows": 0.8168557536466775,
+        "percent_change": -18.314424635332248
+      },
+      "p99_ms": {
+        "windows": 0.0774,
+        "haw": 0.0679,
+        "haw_over_windows": 0.8772609819121447,
+        "percent_change": -12.273901808785526
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "supersededPipeline": {
+    "component": "analysis/metrics/compute_metrics.py",
+    "status": "superseded",
+    "reason": "Von build_evaluation.py abgelöst; bleibt als historische Referenz und für Paritätstests erhalten."
+  },
+  "components": [
+    {
+      "id": "core-e1-e7",
+      "component": "analysis/metrics/build_evaluation.py",
+      "status": "authoritative-core",
+      "outputs": ["metriken.json", "BERICHT.md", "*.csv"]
+    },
+    {
+      "id": "external-judge-reference",
+      "component": "analysis/e8/analyze_e8_2.py",
+      "status": "authoritative-component"
+    },
+    {
+      "id": "external-depth",
+      "component": "analysis/e8/e8_deep.py",
+      "status": "authoritative-component"
+    },
+    {
+      "id": "latency-target",
+      "component": "analysis/e3/analyze_e3_haw.py",
+      "status": "authoritative-override",
+      "overrides": "core-e1-e7:E3-Windows"
+    },
+    {
+      "id": "external-live",
+      "component": "analysis/e5ext/analyze_e5ext.py",
+      "status": "authoritative-extension",
+      "canonicalExperimentId": "E5aeg",
+      "previousExperimentId": "E5ext"
+    },
+    {
+      "id": "anchor-validation",
+      "component": "analysis/validation/verify_anchors.py",
+      "status": "required-validation"
+    },
+    {
+      "id": "report-validation",
+      "component": "analysis/validation/verify_report.py",
+      "status": "required-validation"
+    }
+  ],
+  "currentSynthesis": {
+    "status": "automated-reference-merge",
+    "base": "../experiments/docs/evaluations/20260806/BERICHT_GESAMT.md",
+    "overrides": [
+      "../experiments/docs/evaluations/e3/E3_haw_summary.json",
+      "../experiments/haw_e5ext_20260807_175637.tar.gz::docs/evaluations/e5ext/E5ext_summary.json"
+    ],
+    "normalizer": "src/lib/metrics-bundle.mjs",
+    "command": "harness metrics reference",
+    "target": "artifacts/metrics/reference/metrics.bundle.json",
+    "limitation": "Das Bundle ist ein Golden-Merge der autoritativen Alt-Hauptserien und ausdrücklich keine neue Harness-Haupt-Run-ID."
+  }
+}

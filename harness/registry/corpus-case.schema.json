@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/guardrail-harness/policy-case.schema.json",
+  "title": "Guardrail policy corpus case",
+  "type": "object",
+  "required": [
+    "id",
+    "suite",
+    "risk_class",
+    "command",
+    "expected_decision",
+    "risk"
+  ],
+  "properties": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "suite": { "type": "string", "minLength": 1 },
+    "risk_class": { "type": "string", "minLength": 1 },
+    "command": { "type": "string", "minLength": 1 },
+    "workdir": { "type": ["string", "null"] },
+    "expected_decision": {
+      "enum": ["allow", "block", "require_approval", "escalate_llm"]
+    },
+    "risk": { "type": "integer", "enum": [0, 1] },
+    "effect": { "type": ["string", "null"] },
+    "threat": { "type": ["string", "null"] },
+    "note": { "type": ["string", "null"] },
+    "source": { "type": ["string", "null"] },
+    "bypass_class": { "type": ["string", "null"] },
+    "evasion_class": { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

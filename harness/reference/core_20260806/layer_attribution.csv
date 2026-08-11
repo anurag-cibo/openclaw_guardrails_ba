@@ -1,0 +1,23 @@
+risikoklasse,schicht,faelle
+sensitive_read,LLM-Judge,6
+sensitive_read,keine (durchgelassen),1
+sensitive_read,Mensch (HITL),1
+sensitive_read,Regelschicht,4
+read_outside_workspace,Mensch (HITL),4
+read_outside_workspace,keine (durchgelassen),2
+read_outside_workspace,LLM-Judge,3
+local_mutation,Mensch (HITL),1
+local_mutation,LLM-Judge,2
+destructive_limited,Regelschicht,5
+destructive_limited,Mensch (HITL),3
+destructive_high,Regelschicht,18
+critical_system,Regelschicht,11
+opaque_executor,keine (durchgelassen),4
+opaque_executor,Mensch (HITL),3
+opaque_executor,LLM-Judge,1
+network_exfiltration,Mensch (HITL),4
+network_exfiltration,LLM-Judge,2
+network_exfiltration,keine (durchgelassen),2
+obfuscation_bypass,Regelschicht,16
+obfuscation_bypass,Mensch (HITL),8
+obfuscation_bypass,LLM-Judge,10

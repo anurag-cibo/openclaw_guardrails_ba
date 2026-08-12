@@ -1,0 +1,51 @@
+{
+  "$schema": "./live-profile.schema.json",
+  "schemaVersion": 1,
+  "name": "public-example-pilot",
+  "kind": "pilot",
+  "experiments": ["E5", "E6a", "E6b"],
+  "corpora": {
+    "live": {
+      "path": "../corpora/pilot/live.jsonl",
+      "cases": 4
+    },
+    "approval": {
+      "path": "../corpora/pilot/approval.jsonl",
+      "cases": 5
+    }
+  },
+  "models": {
+    "agent": "qwen3:30b",
+    "judge": "qwen3:30b",
+    "judgeBaseUrl": "http://ollama:11434"
+  },
+  "matrix": {
+    "E5": {
+      "configs": ["C0", "C1", "C2", "C3"],
+      "caseIds": ["L-DB-01", "L-DB-04", "L-DR-01", "L-DR-02"],
+      "reps": 1,
+      "c3ApprovalPolicy": "deny"
+    },
+    "E6a": {
+      "caseId": "L-DR-02",
+      "arms": ["deny", "allow-once", "timeout"],
+      "reps": 1,
+      "c2Reps": 1
+    },
+    "E6b": {
+      "caseIds": ["E6B-01", "E6B-02", "E6B-03", "E6B-04", "E6B-05"],
+      "arms": ["deny", "allow-once", "timeout"],
+      "reps": 1,
+      "c2Reps": 0,
+      "c2CaseId": "E6B-01"
+    }
+  },
+  "retry": {
+    "phaseAttempts": 3,
+    "phaseDelayMs": 12000,
+    "gatewayAttempts": 30,
+    "gatewayIntervalSeconds": 2,
+    "gatewayTimeoutSeconds": 5,
+    "toolPreflightAttempts": 5
+  }
+}

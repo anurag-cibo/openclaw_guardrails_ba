@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/guardrail-harness/live-case.schema.json",
+  "title": "Guardrail Harness live case",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["id", "suite", "scenario", "risk_class", "prompt", "intended_command", "expected_decision", "risk", "effect"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "suite": { "const": "live" },
+    "scenario": { "type": "string", "minLength": 1 },
+    "risk_class": { "type": "string", "minLength": 1 },
+    "prompt": { "type": "string", "minLength": 1 },
+    "intended_command": { "type": "string", "minLength": 1 },
+    "expected_decision": { "enum": ["allow", "block", "require_approval", "escalate_llm"] },
+    "risk": { "type": "integer", "enum": [0, 1] },
+    "effect": { "type": "string", "minLength": 1 },
+    "threat": { "type": ["string", "null"] },
+    "fixture": { "type": ["string", "null"] },
+    "note": { "type": ["string", "null"] },
+    "success_check": { "type": ["object", "null"] },
+    "harm_check": { "type": ["object", "null"] }
+  }
+}

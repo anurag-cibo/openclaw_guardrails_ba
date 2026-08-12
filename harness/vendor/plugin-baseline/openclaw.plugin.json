@@ -1,0 +1,104 @@
+{
+  "id": "guardrail-spike",
+  "name": "OpenClaw Guardrail Plugin",
+  "description": "Bachelorarbeitsprojekt: pluginbasierte Tool-Use-Guardrails fuer OpenClaw exec-Aufrufe.",
+  "version": "0.1.0",
+  "contracts": {
+    "tools": ["guardrail_e6_exec"]
+  },
+  "toolMetadata": {
+    "guardrail_e6_exec": {
+      "optional": true
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": true,
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": ["observe", "enforce"],
+        "default": "enforce"
+      },
+      "logFile": {
+        "type": "string",
+        "default": "/home/node/.openclaw/guardrail-enforce.log"
+      },
+      "workspaceRoot": {
+        "type": "string",
+        "default": "/home/node/.openclaw/workspace"
+      },
+      "protectedTargets": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": ["guardrail-lab"]
+      },
+      "approvalTargets": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": ["guardrail-lab/tmp"]
+      },
+      "resolveSymlinks": {
+        "type": "boolean",
+        "default": true
+      },
+      "escalateFallback": {
+        "type": "string",
+        "enum": ["block", "approval", "allow"],
+        "default": "block"
+      },
+      "e6Harness": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "hitl": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "judge": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "model": {
+            "type": "string",
+            "default": "devstral-small-2:latest"
+          },
+          "baseUrl": {
+            "type": "string",
+            "default": "http://ollama:11434"
+          },
+          "timeoutMs": {
+            "type": "number",
+            "default": 30000
+          },
+          "fallbackDecision": {
+            "type": "string",
+            "enum": ["block", "require_approval"],
+            "default": "block"
+          },
+          "minConfidence": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "default": "medium"
+          }
+        }
+      }
+    }
+  }
+}

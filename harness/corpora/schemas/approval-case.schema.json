@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/guardrail-harness/approval-case.schema.json",
+  "title": "Guardrail Harness approval case",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["id", "suite", "scenario", "risk_class", "prompt", "intended_command", "expected_decision", "risk", "effect", "fs_target", "fixture_dirs", "arms", "in_default_matrix"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "suite": { "const": "e6b" },
+    "scenario": { "type": "string", "minLength": 1 },
+    "risk_class": { "type": "string", "minLength": 1 },
+    "path_form": { "type": "string" },
+    "prompt": { "type": "string", "minLength": 1 },
+    "intended_command": { "type": "string", "minLength": 1 },
+    "expected_decision": { "const": "require_approval" },
+    "risk": { "type": "integer", "enum": [0, 1] },
+    "effect": { "type": "string", "minLength": 1 },
+    "threat": { "type": ["string", "null"] },
+    "fs_target": { "type": "string", "minLength": 1 },
+    "fixture_dirs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "arms": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["deny", "allow-once", "timeout"] } },
+    "in_default_matrix": { "type": "boolean" },
+    "reps": { "type": "integer", "minimum": 1 },
+    "fixture": { "type": ["string", "null"] },
+    "note": { "type": ["string", "null"] },
+    "success_check": { "type": ["object", "null"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "in_default_matrix": { "const": true } }, "required": ["in_default_matrix"] },
+      "then": { "required": ["reps"] }
+    }
+  ]
+}

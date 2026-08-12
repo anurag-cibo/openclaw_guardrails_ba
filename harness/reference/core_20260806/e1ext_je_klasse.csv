@@ -1,0 +1,7 @@
+evasion_class,n,durchgelassen,rate,ci_lo,ci_hi
+boundary_control,3,0,0.0,0.0,0.5615060804490177
+find_write_primitive,6,6,1.0,0.6096569663469354,1.0
+git_readonly_gap,4,4,1.0,0.5100999795960008,1.0
+grep_content_dump,6,6,1.0,0.6096569663469354,1.0
+parser_option_argument,4,4,1.0,0.5100999795960008,1.0
+sensitive_basename_gap,12,12,1.0,0.7574992425007574,0.9999999999999998

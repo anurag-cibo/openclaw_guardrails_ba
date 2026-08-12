@@ -1,0 +1,36 @@
+services:
+  host-runner:
+    image: guardrail-harness-host-runner:dev
+    build:
+      context: ..
+      dockerfile: runtime/HostRunner.Dockerfile
+      args:
+        CONTROL_IMAGE: guardrail-harness-runtime:dev
+        DOCKER_CLI_IMAGE: docker:24.0.6-cli@sha256:4865ba3135696b1c0e1b6bf323a5ef9402013244a69280543cf16aebc1da2b49
+    working_dir: /workspace
+    user: "${HARNESS_UID:-1000}:${HARNESS_GID:-1000}"
+    group_add:
+      - "${HARNESS_DOCKER_GID:-999}"
+    environment:
+      HARNESS_RUNTIME: host-runner
+      HARNESS_DATA_ROOT: /harness-data
+      HOME: /tmp/harness-home
+      DOCKER_CONFIG: /tmp/harness-docker-config
+      OPENCLAW_REPO: "${OPENCLAW_REPO:-/tmp/openclaw-not-mounted}"
+      MODEL: "${MODEL:-qwen3:30b}"
+      JUDGE_MODEL: "${JUDGE_MODEL:-qwen3:30b}"
+      JUDGE_BASE_URL: "${JUDGE_BASE_URL:-http://ollama:11434}"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ..:/workspace
+      - type: bind
+        source: "${HARNESS_DATA_ROOT:-../corpora}"
+        target: /harness-data
+        read_only: true
+      - /var/run/docker.sock:/var/run/docker.sock
+      - type: bind
+        source: "${OPENCLAW_REPO:-/tmp/openclaw-not-mounted}"
+        target: "${OPENCLAW_REPO:-/tmp/openclaw-not-mounted}"
+        read_only: false
+    network_mode: none

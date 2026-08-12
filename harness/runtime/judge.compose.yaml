@@ -1,0 +1,23 @@
+services:
+  judge:
+    image: guardrail-harness-runtime:dev
+    working_dir: /workspace
+    user: "${HARNESS_UID:-1000}:${HARNESS_GID:-1000}"
+    environment:
+      HARNESS_RUNTIME: container
+      JUDGE_BASE_URL: "${JUDGE_BASE_URL:-http://ollama:11434}"
+      JUDGE_MODELS: "${JUDGE_MODELS:-qwen3:30b}"
+      JUDGE_TIMEOUT_MS: "${JUDGE_TIMEOUT_MS:-60000}"
+      JUDGE_MIN_CONFIDENCE: "${JUDGE_MIN_CONFIDENCE:-medium}"
+      JUDGE_MAX_FALLBACK_RATE: "${JUDGE_MAX_FALLBACK_RATE:-0.05}"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ..:/workspace
+    networks:
+      - judge-network
+
+networks:
+  judge-network:
+    external: true
+    name: "${HARNESS_JUDGE_NETWORK:-openclaw_default}"

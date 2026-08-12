@@ -1,0 +1,258 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+RUNTIME_MODE="${HARNESS_RUNTIME:-auto}"
+RUNTIME_IMAGE="guardrail-harness-runtime:dev"
+HOST_RUNNER_IMAGE="guardrail-harness-host-runner:dev"
+
+export HARNESS_UID="${HARNESS_UID:-$(id -u)}"
+export HARNESS_GID="${HARNESS_GID:-$(id -g)}"
+export HARNESS_DATA_ROOT="${HARNESS_DATA_ROOT:-$ROOT/corpora}"
+
+lock_string() {
+  sed -n "s/^[[:space:]]*\"$2\":[[:space:]]*\"\([^\"]*\)\".*/\1/p" "$1" | head -1
+}
+
+image_id() {
+  docker image inspect "$1" --format '{{.Id}}' 2>/dev/null || true
+}
+
+# Die lokale Docker-Image-ID ist kein reproduzierbares Merkmal: Sie haengt von
+# Docker- und BuildKit-Version ab. Deshalb wird sie bevorzugt, aber nicht
+# erzwungen. Weicht sie ab, entscheidet der inhaltliche Nachweis: die im Lock
+# festgehaltenen Laufzeitversionen im Image selbst.
+image_matches_locked_id() {
+  local image="$1" lock="$2" actual
+  actual="$(image_id "$image")"
+  [ -n "$actual" ] || return 1
+  [ "$actual" = "$(lock_string "$lock" builtImageId)" ] && return 0
+  [ "$actual" = "$(lock_string "$lock" targetImportedImageId)" ] && return 0
+  return 1
+}
+
+verify_runtime_image() {
+  local actual want_node want_python probe node_v py_v
+  actual="$(image_id "$RUNTIME_IMAGE")"
+  if [ -z "$actual" ]; then
+    echo "[FEHLER] Runtime-Image $RUNTIME_IMAGE fehlt." >&2
+    echo "        Einmalig ausfuehren: ./bin/harness runtime-build" >&2
+    return 1
+  fi
+  image_matches_locked_id "$RUNTIME_IMAGE" "$ROOT/runtime/image-lock.json" && return 0
+
+  want_node="$(lock_string "$ROOT/runtime/image-lock.json" node)"
+  want_python="$(lock_string "$ROOT/runtime/image-lock.json" python)"
+  want_python="${want_python%% *}"
+  probe="$(docker run --rm --entrypoint sh "$RUNTIME_IMAGE" -c 'node --version; python3 --version' 2>/dev/null || true)"
+  node_v="$(printf '%s\n' "$probe" | sed -n 's/^v\([0-9][0-9.]*\)$/\1/p' | head -1)"
+  py_v="$(printf '%s\n' "$probe" | sed -n 's/^Python \([0-9][0-9.]*\)$/\1/p' | head -1)"
+
+  if [ -z "$node_v" ] || [ "$node_v" != "$want_node" ] || [ "$py_v" != "$want_python" ]; then
+    echo "[FEHLER] Runtime-Image entspricht weder der gelockten ID noch den gelockten Laufzeitversionen." >&2
+    echo "        erwartet: node=$want_node python=$want_python" >&2
+    echo "        gefunden: node=${node_v:-unbekannt} python=${py_v:-unbekannt}" >&2
+    echo "        Image-ID: $actual" >&2
+    return 1
+  fi
+
+  echo "[HINWEIS] Runtime-Image hat eine abweichende Docker-ID, aber die gelockten" >&2
+  echo "          Laufzeitversionen (node=$node_v, python=$py_v)." >&2
+  echo "          Image-IDs sind nicht docker-versionsstabil; der Lauf wird fortgesetzt." >&2
+  echo "          beobachtete Image-ID: $actual" >&2
+  return 0
+}
+
+verify_host_runner_image() {
+  local actual want_cli probe cli_v
+  actual="$(image_id "$HOST_RUNNER_IMAGE")"
+  if [ -z "$actual" ]; then
+    echo "[FEHLER] Host-Runner-Image $HOST_RUNNER_IMAGE fehlt." >&2
+    echo "        Einmalig ausfuehren: ./bin/harness runtime-build" >&2
+    return 1
+  fi
+  image_matches_locked_id "$HOST_RUNNER_IMAGE" "$ROOT/runtime/host-runner-lock.json" && return 0
+
+  want_cli="$(lock_string "$ROOT/runtime/host-runner-lock.json" dockerCli)"
+  probe="$(docker run --rm --entrypoint sh "$HOST_RUNNER_IMAGE" -c 'docker --version' 2>/dev/null || true)"
+  cli_v="$(printf '%s\n' "$probe" | sed -n 's/^Docker version \([0-9][0-9.]*\).*/\1/p' | head -1)"
+
+  if [ -z "$cli_v" ] || { [ -n "$want_cli" ] && [ "$cli_v" != "${want_cli##* }" ] && [ "$cli_v" != "$want_cli" ]; }; then
+    echo "[FEHLER] Host-Runner entspricht weder der gelockten ID noch der gelockten Docker-CLI." >&2
+    echo "        erwartet: ${want_cli:-unbekannt}" >&2
+    echo "        gefunden: ${cli_v:-unbekannt}" >&2
+    echo "        Image-ID: $actual" >&2
+    return 1
+  fi
+
+  echo "[HINWEIS] Host-Runner hat eine abweichende Docker-ID, aber die gelockte" >&2
+  echo "          Docker-CLI ($cli_v). beobachtete Image-ID: $actual" >&2
+  return 0
+}
+
+case "${1:-}" in
+  launch)
+    shift
+    case "${1:-}:${2:-}" in
+      judge:pilot|live:pilot|live:main) ;;
+      *)
+        echo "[FEHLER] Im Hintergrund freigegeben sind Judge-Piloten sowie profilgebundene Live-Pilot- und Hauptläufe." >&2
+        echo "        Beispiel: ./bin/harness launch live main --profile profiles/live-main.example.json --pilot-run RUN-ID" >&2
+        exit 3
+        ;;
+    esac
+    exec bash "$ROOT/bin/job-control.sh" launch "$ROOT/artifacts/jobs" \
+      bash "$ROOT/bin/harness" "$@"
+    ;;
+  jobs)
+    shift
+    exec bash "$ROOT/bin/job-control.sh" list "$ROOT/artifacts/jobs" "$@"
+    ;;
+  job-status)
+    shift
+    exec bash "$ROOT/bin/job-control.sh" status "$ROOT/artifacts/jobs" "$@"
+    ;;
+  job-log)
+    shift
+    exec bash "$ROOT/bin/job-control.sh" log "$ROOT/artifacts/jobs" "$@"
+    ;;
+  host-info)
+    shift
+    exec bash "$ROOT/bin/host-info.sh" "$@"
+    ;;
+  runtime-build)
+    shift
+    FORCE_BUILD=0
+    if [ "${1:-}" = "--force" ]; then FORCE_BUILD=1; shift; fi
+    # Ein Neubau ueberschreibt den Tag. Unter Docker mit containerd-Image-Store
+    # ist das vorherige Image danach nicht mehr erreichbar. Ein bereits
+    # validiertes Image wird deshalb nicht kommentarlos ersetzt.
+    if [ "$FORCE_BUILD" -eq 0 ]; then
+      GUARDED=""
+      image_matches_locked_id "$RUNTIME_IMAGE" "$ROOT/runtime/image-lock.json" && GUARDED="$RUNTIME_IMAGE"
+      image_matches_locked_id "$HOST_RUNNER_IMAGE" "$ROOT/runtime/host-runner-lock.json" \
+        && GUARDED="${GUARDED:+$GUARDED und }$HOST_RUNNER_IMAGE"
+      if [ -n "$GUARDED" ]; then
+        echo "[ABBRUCH] Es liegt bereits ein gegen den Lock validiertes Image vor: $GUARDED" >&2
+        echo "          Ein Neubau wuerde es ersetzen und ist nicht rueckgaengig zu machen;" >&2
+        echo "          bei containerd-Image-Store ist das alte Image danach geloescht." >&2
+        echo "          Es besteht kein Grund zum Neubau. Zum Pruefen:" >&2
+        echo "            ./bin/harness runtime-check" >&2
+        echo "          Nur falls der Neubau wirklich beabsichtigt ist:" >&2
+        echo "            ./bin/harness runtime-build --force" >&2
+        exit 3
+      fi
+    fi
+    docker compose -f "$ROOT/runtime/compose.yaml" build control "$@"
+    verify_runtime_image
+    docker compose -f "$ROOT/runtime/compose.yaml" -f "$ROOT/runtime/live.compose.yaml" build host-runner "$@"
+    verify_host_runner_image
+    exit $?
+    ;;
+  runtime-check)
+    shift
+    verify_runtime_image
+    exec docker compose -f "$ROOT/runtime/compose.yaml" run --rm control doctor "$@"
+    ;;
+  package-source)
+    shift
+    verify_runtime_image
+    exec docker compose -f "$ROOT/runtime/compose.yaml" run --rm \
+      --entrypoint bash control /workspace/bin/package-source.sh "$@"
+    ;;
+  package-public)
+    shift
+    verify_runtime_image
+    exec docker compose -f "$ROOT/runtime/compose.yaml" run --rm \
+      --entrypoint bash control /workspace/bin/package-public.sh "$@"
+    ;;
+  judge)
+    service="judge"
+    compose_files=(-f "$ROOT/runtime/compose.yaml" -f "$ROOT/runtime/judge.compose.yaml")
+    for argument in "$@"; do
+      if [ "$argument" = "--mock" ]; then
+        service="control"
+        compose_files=(-f "$ROOT/runtime/compose.yaml")
+      fi
+    done
+    if ! command -v docker >/dev/null 2>&1; then
+      echo "[FEHLER] Docker wird für Judge-Runs benötigt." >&2
+      exit 127
+    fi
+    if [ "$service" = "judge" ] && [ -z "${HARNESS_JUDGE_NETWORK:-}" ]; then
+      openclaw_repo_value="${OPENCLAW_REPO:-}"
+      if [ -f "$openclaw_repo_value/docker-compose.yml" ] && [ -f "$openclaw_repo_value/docker-compose.ollama.override.yml" ]; then
+        ollama_container="$(docker compose -f "$openclaw_repo_value/docker-compose.yml" \
+          -f "$openclaw_repo_value/docker-compose.ollama.override.yml" ps -q ollama 2>/dev/null || true)"
+        if [ -n "$ollama_container" ]; then
+          HARNESS_JUDGE_NETWORK="$(docker inspect "$ollama_container" \
+            --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' 2>/dev/null | head -n 1)"
+          export HARNESS_JUDGE_NETWORK
+        fi
+      fi
+    fi
+    verify_runtime_image
+    exec docker compose "${compose_files[@]}" run --rm "$service" "$@"
+    ;;
+  live)
+    subcommand="${2:-}"
+    if [ "$subcommand" = "preflight" ]; then
+      shift 2
+      exec bash "$ROOT/bin/target-preflight.sh" "$@"
+    fi
+    if [ "$subcommand" = "plan" ]; then
+      if ! command -v docker >/dev/null 2>&1; then
+        echo "[FEHLER] Docker wird für den portablen Live-Plan benötigt." >&2
+        exit 127
+      fi
+      verify_runtime_image
+      exec docker compose -f "$ROOT/runtime/compose.yaml" run --rm control "$@"
+    fi
+    if [ "$subcommand" = "plugin-info" ]; then
+      if ! command -v docker >/dev/null 2>&1; then
+        echo "[FEHLER] Docker wird fuer live plugin-info benoetigt." >&2
+        exit 127
+      fi
+      if [ ! -S /var/run/docker.sock ]; then
+        echo "[FEHLER] /var/run/docker.sock fehlt; deployter Plugin-Hash kann nicht gelesen werden." >&2
+        exit 3
+      fi
+      verify_runtime_image
+      verify_host_runner_image
+      bash "$ROOT/bin/target-preflight.sh"
+      export HARNESS_DOCKER_GID="${HARNESS_DOCKER_GID:-$(stat -c '%g' /var/run/docker.sock)}"
+      exec docker compose -f "$ROOT/runtime/compose.yaml" -f "$ROOT/runtime/live.compose.yaml" \
+        run --rm host-runner "$@"
+    fi
+    if [ "$subcommand" = "pilot" ] || [ "$subcommand" = "main" ]; then
+      if ! command -v docker >/dev/null 2>&1; then
+        echo "[FEHLER] Docker wird für Live-Läufe benötigt." >&2
+        exit 127
+      fi
+      if [ ! -S /var/run/docker.sock ]; then
+        echo "[FEHLER] /var/run/docker.sock fehlt; Live-Läufe bleiben gesperrt." >&2
+        exit 3
+      fi
+      verify_runtime_image
+      verify_host_runner_image
+      exec bash "$ROOT/bin/live-lock.sh" "$ROOT/artifacts/locks" \
+        bash "$ROOT/bin/live-pilot.sh" "$@"
+    fi
+    echo "[FEHLER] Unbekannter Live-Befehl." >&2
+    echo "        Erlaubt: ./bin/harness live plugin-info | plan | pilot | main" >&2
+    exit 3
+    ;;
+esac
+
+if [ "$RUNTIME_MODE" != "docker" ] && command -v node >/dev/null 2>&1; then
+  exec node "$ROOT/src/cli.mjs" "$@"
+fi
+
+if command -v docker >/dev/null 2>&1; then
+  verify_runtime_image
+  exec docker compose -f "$ROOT/runtime/compose.yaml" run --rm control "$@"
+fi
+
+echo "[FEHLER] Weder Node.js noch eine nutzbare Docker-Runtime gefunden." >&2
+echo "        Es wurde nichts ausgeführt." >&2
+exit 127

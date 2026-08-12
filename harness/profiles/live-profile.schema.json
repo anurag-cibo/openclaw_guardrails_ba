@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/guardrail-harness/live-profile.schema.json",
+  "title": "Guardrail Harness live pilot profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "name", "kind", "experiments", "corpora", "models", "matrix", "retry"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "name": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "kind": { "enum": ["pilot", "main"] },
+    "experiments": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["E5", "E6a", "E6b"] }
+    },
+    "corpora": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["live", "approval"],
+      "properties": {
+        "live": { "$ref": "#/$defs/corpus" },
+        "approval": { "$ref": "#/$defs/corpus" }
+      }
+    },
+    "models": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent", "judge", "judgeBaseUrl"],
+      "properties": {
+        "agent": { "type": "string", "minLength": 1 },
+        "judge": { "type": "string", "minLength": 1 },
+        "judgeBaseUrl": { "type": "string", "pattern": "^https?://" }
+      }
+    },
+    "matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["E5", "E6a", "E6b"],
+      "properties": {
+        "E5": { "$ref": "#/$defs/e5" },
+        "E6a": { "$ref": "#/$defs/e6a" },
+        "E6b": { "$ref": "#/$defs/e6b" }
+      }
+    },
+    "retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phaseAttempts", "phaseDelayMs", "gatewayAttempts", "gatewayIntervalSeconds", "gatewayTimeoutSeconds", "toolPreflightAttempts"],
+      "properties": {
+        "phaseAttempts": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "phaseDelayMs": { "type": "integer", "minimum": 0, "maximum": 300000 },
+        "gatewayAttempts": { "type": "integer", "minimum": 1, "maximum": 120 },
+        "gatewayIntervalSeconds": { "type": "number", "exclusiveMinimum": 0, "maximum": 60 },
+        "gatewayTimeoutSeconds": { "type": "number", "exclusiveMinimum": 0, "maximum": 120 },
+        "toolPreflightAttempts": { "type": "integer", "minimum": 1, "maximum": 20 }
+      }
+    }
+  },
+  "$defs": {
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "cases"],
+      "properties": {
+        "root": { "enum": ["harness", "data"], "default": "harness" },
+        "path": { "type": "string", "minLength": 1 },
+        "cases": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "positiveReps": { "type": "integer", "minimum": 1, "maximum": 1000 },
+    "e5": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["configs", "caseIds", "reps", "c3ApprovalPolicy"],
+      "properties": {
+        "configs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["C0", "C1", "C2", "C3"] } },
+        "caseIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "reps": { "$ref": "#/$defs/positiveReps" },
+        "c3ApprovalPolicy": { "enum": ["deny", "allow-once", "timeout"] }
+      }
+    },
+    "e6a": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseId", "arms", "reps", "c2Reps"],
+      "properties": {
+        "caseId": { "type": "string", "minLength": 1 },
+        "arms": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["deny", "allow-once", "timeout"] } },
+        "reps": { "$ref": "#/$defs/positiveReps" },
+        "c2Reps": { "type": "integer", "minimum": 0, "maximum": 1000 }
+      }
+    },
+    "e6b": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseIds", "arms", "reps", "c2Reps", "c2CaseId"],
+      "properties": {
+        "caseIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "arms": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["deny", "allow-once", "timeout"] } },
+        "reps": { "$ref": "#/$defs/positiveReps" },
+        "c2Reps": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "c2CaseId": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -1,0 +1,430 @@
+{
+  "schemaVersion": 1,
+  "host": "gpu-v100s-01",
+  "date": "2026-08-10",
+  "lastUpdated": "2026-08-11",
+  "preflight": {
+    "passed": true,
+    "errors": 0,
+    "platform": "linux/amd64",
+    "openclawGatewayRunning": true,
+    "ollamaRunning": true,
+    "model": "qwen3:30b",
+    "archiveSha256Verified": true
+  },
+  "pilots": {
+    "E4": {
+      "runId": "20260810T195101Z_pilot_7ca5de",
+      "kind": "pilot",
+      "mock": false,
+      "status": "completed",
+      "stageStatus": "succeeded",
+      "attempts": 1,
+      "registeredArtifacts": 3
+    },
+    "E5_E6": {
+      "status": "completed-and-integrity-verified",
+      "runId": "20260810T200613Z_pilot_7be533",
+      "jobId": "20260810T200611Z_2230896_5332",
+      "expectedRows": 32,
+      "detachedLaunchRequired": true,
+      "E5": {
+        "status": "succeeded",
+        "rows": 16
+      },
+      "E6a": {
+        "status": "succeeded",
+        "runId": "20260810T205145Z_pilot_e74860",
+        "rows": 4,
+        "valid": 4
+      },
+      "E6b": {
+        "status": "succeeded-with-model-refusals",
+        "runId": "20260810T205145Z_pilot_e74860",
+        "rows": 12,
+        "reached": 3,
+        "valid": 3,
+        "noToolCall": 9,
+        "conditionalEnforcementFidelity": 1,
+        "validArmsObserved": ["deny", "allow-once", "timeout"]
+      },
+      "artifactIntegrity": {
+        "runId": "20260810T205145Z_pilot_e74860",
+        "checked": 99,
+        "status": "ok"
+      },
+      "diagnosticEvidence": {
+        "hostAvailableMemoryGiB": 123,
+        "gpuMemoryUsedMiB": 1,
+        "dockerOomEvents": 0,
+        "overlappingHostRunnerContainers": true
+      },
+      "remediation": "Exclusive flock-based live target lock plus narrow E6 gateway-start retry; concurrent launch is rejected before preflight and configuration mutation; validated in Linux control runtime",
+      "pilotTechnicalGate": "passed",
+      "eligibleAsFinalMetrics": false
+    },
+    "publicPilotRetest": {
+      "runId": "20260810T214653Z_pilot_28af89",
+      "status": "failed-during-E6a-readiness",
+      "E5": {
+        "status": "succeeded",
+        "rows": 16,
+        "approvalResponderNoRequestObserved": true
+      },
+      "E6a": {
+        "status": "failed-before-measurement",
+        "attempts": 3,
+        "transient": true,
+        "error": "Gateway WebSocket 1006 after fixed six-second post-restart delay"
+      },
+      "remediation": "E6a now uses a non-legacy adapter with active plugin.approval.list RPC readiness probes and a separately retried tools.invoke preflight; target-host retest pending",
+      "legacyModified": false
+    },
+    "gatewayReadinessProbeRetest": {
+      "jobId": "20260810T223652Z_2384810_19197",
+      "status": "superseded-by-successful-target-host-retest",
+      "attempts": 1,
+      "error": "Bash default expansion appended an extra closing brace to --params, producing invalid JSON",
+      "remediation": "Readiness probe extracted to adapters/live/wait-gateway-rpc.sh; exact empty JSON object and retry behavior covered by an executable Linux contract test",
+      "targetHostRetestPending": false,
+      "legacyModified": false
+    },
+    "activeGatewayReadinessRetest": {
+      "runId": "20260810T224516Z_pilot_799999",
+      "status": "completed",
+      "stage": "E6a",
+      "stageStatus": "succeeded",
+      "attempts": 1,
+      "registeredArtifacts": 25,
+      "adapter": "adapters/live/run_e6.sh",
+      "rows": 4,
+      "reached": 4,
+      "refusals": 0,
+      "valid": 4,
+      "conditionalEnforcementFidelity": 1,
+      "artifactIntegrity": {
+        "checked": 25,
+        "status": "ok"
+      },
+      "pilotTechnicalGate": "passed",
+      "eligibleAsFinalMetrics": false,
+      "artifactIntegrityPending": false,
+      "summaryPending": false,
+      "legacyModified": false
+    },
+    "profileDrivenFullLivePilot": {
+      "runId": "20260810T232157Z_pilot_35ba85",
+      "jobId": "20260810T232154Z_2417563_31226",
+      "status": "completed-and-integrity-verified",
+      "duration": "2026-08-10T23:21:54Z/2026-08-11T00:03:48Z",
+      "profile": "profiles/live-pilot.example.json",
+      "expectedRows": 32,
+      "registeredArtifacts": 163,
+      "artifactIntegrity": "ok",
+      "E5": { "rows": 16, "reached": 12, "noToolCall": 4 },
+      "E6a": { "rows": 4, "reached": 4, "valid": 4, "conditionalEnforcementFidelity": 1 },
+      "E6b": { "rows": 12, "reached": 3, "valid": 3, "noToolCall": 9, "conditionalEnforcementFidelity": 1 },
+      "validApprovalArms": ["deny", "allow-once", "timeout"],
+      "protectedTargetViolations": 0,
+      "pilotTechnicalGate": "passed",
+      "eligibleAsFinalMetrics": false
+    }
+  },
+  "localProductization": {
+    "liveProfiles": {
+      "status": "implemented-and-linux-tested",
+      "example": "profiles/live-pilot.example.json",
+      "schema": "profiles/live-profile.schema.json",
+      "privateProfileRoot": "profiles/local",
+      "privateCorpusRoots": ["corpora/private", "corpora/custom"],
+      "matrixParameters": ["configs", "caseIds", "reps", "approvalArms", "c2Controls", "models", "retryBounds"],
+      "stabilizedAdapters": ["E5", "E6a", "E6b"],
+      "containerTestsPassed": 70,
+      "targetHostValidationPending": false,
+      "mainProfilesAllowed": true
+    },
+    "externalDataRoot": {
+      "status": "target-host-validated",
+      "hostVariable": "HARNESS_DATA_ROOT",
+      "containerPath": "/harness-data",
+      "mountMode": "read-only",
+      "profileRootValue": "data",
+      "hostPathRecordedInPlan": false,
+      "rejects": ["absolute-corpus-path", "parent-traversal", "symlink-escape"],
+      "example": "profiles/live-pilot.data-root.example.json",
+      "targetHostValidationPending": false,
+      "targetHostEvidence": {
+        "runId": "20260811T105751Z_pilot_df19b0",
+        "jobId": "20260811T105748Z_2542611_1689",
+        "stage": "E6a",
+        "status": "completed",
+        "duration": "2026-08-11T10:57:48Z/2026-08-11T11:05:12Z",
+        "rows": 4,
+        "reached": 4,
+        "valid": 4,
+        "conditionalEnforcementFidelity": 1,
+        "registeredArtifacts": 25,
+        "artifactIntegrity": "ok",
+        "pilotTechnicalGate": "passed",
+        "eligibleAsFinalMetrics": false
+      }
+    },
+    "publicDistribution": {
+      "status": "target-host-validated-compact-main-release-candidate",
+      "builder": "src/tools/build-public-distribution.mjs",
+      "defaultSmokeProfile": "profiles/live-smoke.example.json",
+      "includedExperiments": ["E1", "E2", "E3", "E4", "E5", "E6a", "E6b"],
+      "files": 92,
+      "sourceBytesBeforeManifest": 375348,
+      "selfTestsPassed": 4,
+      "privateDataIncluded": false,
+      "targetSpecificPathsIncluded": false,
+      "containerValidationPending": false,
+      "containerSelfTestsPassed": 4,
+      "containerDoctorPassed": true,
+      "cleanArchiveSelfTestPassed": true,
+      "archive": {
+        "path": "runtime/packages/guardrail-harness-public_20260811.tar.gz",
+        "bytes": 102102,
+        "sha256": "36739779b51a3eddb0365863101774a51fc307b508c4cd24f55558eced7a3c60"
+      },
+      "targetHostPreflight": {
+        "status": "passed-for-previous-archive",
+        "appliesToArchiveSha256": "b2a426548c0af4a7c98b71835fba215de4ef2249a392d9f179ecd7d59280064d",
+        "archiveSha256Verified": true,
+        "runtimeDoctorPassed": true,
+        "registryStatus": "ok",
+        "compatibilityFiles": 6,
+        "selfTestsPassed": 3,
+        "smokeProfileSha256": "2c83fe0af8e9e5ea780f839bb20b4d175cecde3f6b1185e13a4ccbd6e5eddf15",
+        "plannedRows": 4,
+        "livePreflightErrors": 0
+      },
+      "targetHostValidationPending": false,
+      "targetHostEvidence": {
+        "appliesToArchiveSha256": "b2a426548c0af4a7c98b71835fba215de4ef2249a392d9f179ecd7d59280064d",
+        "runId": "20260811T113108Z_pilot_5c961a",
+        "jobId": "20260811T113105Z_2567766_24662",
+        "profile": "profiles/live-smoke.example.json",
+        "stage": "E6a",
+        "status": "completed",
+        "duration": "2026-08-11T11:31:05Z/2026-08-11T11:38:28Z",
+        "rows": 4,
+        "reached": 4,
+        "refusals": 0,
+        "valid": 4,
+        "conditionalEnforcementFidelity": 1,
+        "registeredArtifacts": 25,
+        "artifactIntegrity": "ok",
+        "pilotTechnicalGate": "passed",
+        "eligibleAsFinalMetrics": false
+      },
+      "postCandidateHardening": {
+        "status": "target-host-validated",
+        "feature": "deployed plugin core fingerprint in every future live-run manifest",
+        "containerTestsPassed": 72,
+        "readOnlyCommand": "./bin/harness live plugin-info",
+        "standaloneImageIdentityCheck": "accepts exact previously validated HAW import IDs without requiring the historical transport archive; a present mismatching archive still fails",
+        "standaloneTargetEvidence": {
+          "archiveSha256": "58a1c31add7d306f8a30ead1083c114f3867a8770aab06e52c6cd4b2c8fa4584",
+          "preflightErrors": 0,
+          "controlRuntimeImportIdMatched": true,
+          "hostRunnerImportIdMatched": true,
+          "pluginFiles": 10,
+          "deployedByteSha256": "ae469a0fdd270ea0221aaf9ca98a884fdd2fca3de0b9363edf9691ac33412eb0",
+          "baselineByteSha256": "0e3b7e620d56f454515c7685a530a4b6d51a2bd459b048c6766c4c3397baa68a",
+          "executableSourceFilesByteIdentical": 7,
+          "rootFilesDifferOnlyByCrLfNormalization": 3,
+          "normalizedTextSha256": "ae469a0fdd270ea0221aaf9ca98a884fdd2fca3de0b9363edf9691ac33412eb0"
+        },
+        "currentArchiveSha256": "36739779b51a3eddb0365863101774a51fc307b508c4cd24f55558eced7a3c60",
+        "previousTargetEvidence": {
+          "archiveSha256Verified": true,
+          "preflightErrors": 0,
+          "controlRuntimeImportIdMatched": true,
+          "hostRunnerImportIdMatched": true,
+          "pluginFiles": 10,
+          "deployedByteSha256": "ae469a0fdd270ea0221aaf9ca98a884fdd2fca3de0b9363edf9691ac33412eb0",
+          "baselineByteSha256": "0e3b7e620d56f454515c7685a530a4b6d51a2bd459b048c6766c4c3397baa68a",
+          "deployedNormalizedTextSha256": "ae469a0fdd270ea0221aaf9ca98a884fdd2fca3de0b9363edf9691ac33412eb0",
+          "baselineNormalizedTextSha256": "ae469a0fdd270ea0221aaf9ca98a884fdd2fca3de0b9363edf9691ac33412eb0",
+          "byteIdenticalToMeasurementBaseline": false,
+          "matchesMeasurementBaseline": true,
+          "configurationMutated": false
+        },
+        "targetHostValidationPending": false
+      }
+    }
+  },
+  "compactMainRun": {
+    "status": "target-host-validated",
+    "pilotProfile": "profiles/live-main-pilot.example.json",
+    "mainProfile": "profiles/live-main.example.json",
+    "expectedRowsPerRun": 20,
+    "measurementContractFingerprint": "fa596d5c05c818f25d070e0fdf6b16aeab7bb88916d682332232fd5f4163ea75",
+    "matchingPilotRequired": true,
+    "automaticMetricsBundle": true,
+    "containerTestsPassed": 75,
+    "cleanArchiveSelfTestsPassed": 4,
+    "targetHostEvidence": {
+      "pilot": {
+        "runId": "20260811T123403Z_pilot_2752ea",
+        "kind": "pilot",
+        "status": "completed",
+        "expectedRows": 20,
+        "stages": {
+          "E5": { "status": "succeeded", "attempts": 1, "registeredArtifacts": 63 },
+          "E6a": { "status": "succeeded", "attempts": 1, "registeredArtifacts": 25 }
+        },
+        "qualifiedByMainGate": true
+      },
+      "main": {
+        "runId": "20260811T130525Z_main_30d55b",
+        "jobId": "20260811T130522Z_2652157_14542",
+        "kind": "main",
+        "status": "completed",
+        "duration": "2026-08-11T13:05:22Z/2026-08-11T13:32:12Z",
+        "expectedRows": 20,
+        "registeredArtifacts": 89,
+        "artifactIntegrity": "ok",
+        "pilotQualification": "passed",
+        "eligibleAsFinalMetrics": true,
+        "E5": { "rows": 16, "reached": 12, "noToolCall": 4 },
+        "E6a": {
+          "rows": 4,
+          "reached": 4,
+          "refusals": 0,
+          "valid": 4,
+          "conditionalEnforcementFidelity": 1
+        },
+        "metrics": {
+          "path": "derived/metrics.bundle.json",
+          "sha256": "92d4a9943b5c4427b0f12c34816bc05ba47c296602ac4009b002fe20069c1c45",
+          "profileScopeReleased": true,
+          "statisticallyRepresentative": false
+        }
+      }
+    },
+    "targetHostValidationPending": false
+  },
+  "documentationCandidate": {
+    "status": "superseded-by-metrics-snapshot-candidate",
+    "files": 93,
+    "sourceBytesBeforeManifest": 384784,
+    "selfTestsPassed": 4,
+    "markdownLinksValid": true,
+    "customCorpusWorkflowDocumented": true,
+    "table54CoverageDocumented": true,
+    "table54AggregationComplete": false,
+    "figureGenerationInScope": false,
+    "validatedRuntimeArchiveUnchanged": true,
+    "validatedRuntimeArchiveSha256": "36739779b51a3eddb0365863101774a51fc307b508c4cd24f55558eced7a3c60"
+  },
+  "metricsSnapshotCandidate": {
+    "status": "target-host-and-local-evidence-validated",
+    "files": 93,
+    "sourceBytesBeforeManifest": 401464,
+    "fullDevelopmentTests": { "passed": 74, "failed": 0, "platformSkipped": 3 },
+    "cleanArchiveSelfTests": { "passed": 4, "failed": 0 },
+    "features": [
+      "validated profile and both corpora snapshotted before live mutation",
+      "snapshot artifacts registered and covered by verify",
+      "E5 and E6 rate aggregation with Wilson 95 intervals",
+      "latency and conditional token summaries with explicit missingness",
+      "step-by-step external corpus workflow in public README"
+    ],
+    "table54OperationalMetricsAggregated": true,
+    "table54Complete": false,
+    "remainingTable54InstrumentationGap": "judge-specific token attribution",
+    "archive": {
+      "path": "runtime/packages/guardrail-harness-public_20260811_metrics-snapshot-rc.tar.gz",
+      "bytes": 110102,
+      "sha256": "57fe07dd8829a302b04cfb6cd6f4cada40628e5366716ee2e1d0b1f407c64b4f"
+    },
+    "previousValidatedArchiveUnchanged": true,
+    "previousValidatedArchiveSha256": "36739779b51a3eddb0365863101774a51fc307b508c4cd24f55558eced7a3c60",
+    "targetHostPreflight": {
+      "date": "2026-08-11",
+      "archiveSha256Verified": true,
+      "archiveSha256": "57fe07dd8829a302b04cfb6cd6f4cada40628e5366716ee2e1d0b1f407c64b4f",
+      "runtimeCheckPassed": true,
+      "registryStatus": "ok",
+      "profile": "profiles/live-main-pilot.example.json",
+      "profileSha256": "356fb2047efc4e63d42b5f929ee6192b0f308ace3bda2484d7d0e64f13e0a8cc",
+      "measurementContractFingerprint": "fa596d5c05c818f25d070e0fdf6b16aeab7bb88916d682332232fd5f4163ea75",
+      "plannedRows": 20,
+      "preflightErrors": 0,
+      "controlRuntimeImportIdMatched": true,
+      "hostRunnerImportIdMatched": true,
+      "openclawGatewayRunning": true,
+      "ollamaRunning": true,
+      "configurationMutated": false
+    },
+    "targetHostPilot": {
+      "runId": "20260811T145653Z_pilot_6006ef",
+      "jobId": "20260811T145650Z_2731916_3381",
+      "status": "completed",
+      "duration": "2026-08-11T14:56:50Z/2026-08-11T15:24:50Z",
+      "expectedRows": 20,
+      "registeredArtifacts": 91,
+      "artifactIntegrity": "ok",
+      "pilotTechnicalGate": "passed",
+      "eligibleAsFinalMetrics": false,
+      "E5": { "rows": 16, "reached": 11, "noToolCall": 5 },
+      "E6a": { "rows": 4, "reached": 4, "valid": 4, "noToolCall": 0, "conditionalEnforcementFidelity": 1 },
+      "inputSnapshots": ["inputs/profile.json", "inputs/corpora/live.jsonl", "inputs/corpora/approval.jsonl"],
+      "inputSnapshotsVerified": true
+    },
+    "targetHostMain": {
+      "runId": "20260811T152727Z_main_a7da01",
+      "jobId": "20260811T152724Z_2777817_17434",
+      "status": "completed",
+      "duration": "2026-08-11T15:27:24Z/2026-08-11T15:55:26Z",
+      "expectedRows": 20,
+      "registeredArtifacts": 92,
+      "artifactIntegrity": "ok",
+      "pilotQualification": "passed",
+      "pilotRunId": "20260811T145653Z_pilot_6006ef",
+      "eligibleAsFinalMetrics": true,
+      "E5": { "rows": 16, "reached": 12, "noToolCall": 4 },
+      "E6a": { "rows": 4, "reached": 4, "valid": 4, "noToolCall": 0, "conditionalEnforcementFidelity": 1 },
+      "inputSnapshots": ["inputs/profile.json", "inputs/corpora/live.jsonl", "inputs/corpora/approval.jsonl"],
+      "inputSnapshotsVerified": true,
+      "metrics": {
+        "path": "derived/metrics.bundle.json",
+        "sha256": "0510c389011a898957123292462afc9877b5c7d66b84b9e34bb2517726c1a901",
+        "profileScopeReleased": true,
+        "statisticallyRepresentative": false,
+        "schemaVersion": 2,
+        "inputSnapshotsRegistered": true,
+        "e5MetricInventoryVerified": true,
+        "tokenTelemetry": { "available": 0, "missing": 16, "sum": null },
+        "schemaVersionDiagnosticPending": false
+      }
+    },
+    "localEvidenceCopy": {
+      "pilotRunId": "20260811T145653Z_pilot_6006ef",
+      "pilotArtifactsChecked": 91,
+      "pilotIntegrity": "ok",
+      "mainRunId": "20260811T152727Z_main_a7da01",
+      "mainArtifactsChecked": 92,
+      "mainIntegrity": "ok",
+      "metricsSha256": "0510c389011a898957123292462afc9877b5c7d66b84b9e34bb2517726c1a901",
+      "pilotQualification": "passed",
+      "eligibleAsFinalMetrics": true
+    },
+    "releaseAudit": {
+      "archiveSha256": "57fe07dd8829a302b04cfb6cd6f4cada40628e5366716ee2e1d0b1f407c64b4f",
+      "archiveBytes": 110102,
+      "manifestTrackedFiles": 92,
+      "manifestSourceBytes": 401464,
+      "forbiddenArchiveEntries": 0,
+      "markdownLinksChecked": 5,
+      "brokenMarkdownLinks": 0,
+      "cleanArchiveSelfTestsPassed": 4
+    },
+    "targetHostValidationPending": false,
+    "pendingEvidence": []
+  },
+  "mainRunUnlocked": true
+}

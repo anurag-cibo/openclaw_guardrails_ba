@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "pluginMeasurementBaseline": {
+    "source": "../guardrail-plugin/openclaw_guardrails_ba",
+    "copy": "vendor/plugin-baseline",
+    "commit": "9219828b9a43681e388335f8db78309c34a42fd2"
+  },
+  "e5aegArchive": {
+    "source": "../experiments/haw_e5ext_20260807_175637.tar.gz",
+    "status": "authoritative-extracted-reference",
+    "copy": "reference/e5aeg_archive",
+    "files": 4,
+    "inventorySha256": "1662f2ab1e627fafd7c7782dbc5ccefd43b43c912bf526b8161b275357f03626",
+    "previousInventorySha256": "d41aedbf5d1d06b90ce26c453a9902865be9d3541792c261954981225e7a5951",
+    "rebaselinedOn": "2026-08-11",
+    "rebaselineReason": "Absolute Pfade der urspruenglichen Messumgebung wurden durch den neutralen Platzhalter <messumgebung> ersetzt. Es wurde ausschliesslich Provenienz-Metadatentext geaendert; alle Messwerte sind unveraendert."
+  },
+  "referenceOutputs": {
+    "core_20260806": {
+      "files": 20,
+      "inventorySha256": "a6460dee71ce95e95e91bbbc59af11da03ac6b5527076a73bf0709fbe707ea52"
+    },
+    "e3_haw": {
+      "files": 2,
+      "inventorySha256": "5deca198589f4b220a85bc28f7b95d7831ce4f283e4fd170b5ad0fb5a7add260",
+      "previousInventorySha256": "55f0f179a920cc433ae37c51e035bdabe824731757b3631e25ea0c9c093db246",
+      "rebaselinedOn": "2026-08-11",
+      "rebaselineReason": "Absolute Pfade der urspruenglichen Messumgebung durch <messumgebung> ersetzt; ausschliesslich Provenienz-Metadaten, alle Messwerte unveraendert."
+    },
+    "e4aeg": {
+      "files": 3,
+      "inventorySha256": "e0a5ac71f21f9d21a92de8e7061f8035eee1790c71dfa1a1e52ccb1b63d98e9a",
+      "previousInventorySha256": "37fc006d24c13cb32eba329c5afffbf5098b015bbce4dd93149239364321f670",
+      "rebaselinedOn": "2026-08-11",
+      "rebaselineReason": "Absolute Pfade der urspruenglichen Messumgebung durch <messumgebung> ersetzt; ausschliesslich Provenienz-Metadaten, alle Messwerte unveraendert."
+    }
+  },
+  "experimentRunners": {
+    "source": "../experiments/harness",
+    "copy": "runners",
+    "status": "maintained-experiment-runners",
+    "files": 25,
+    "inventorySha256": "90c2a4e4fa2fae0929ddd65a32f1a8e21e5314c587f25a9a4e14cf743897ec67",
+    "previousInventorySha256": "dd622015be4d03ec3d3fc3c7c9236153cadb24fb87e93cf39af6b931403c113c",
+    "rebaselinedOn": "2026-08-11",
+    "rebaselineReason": "Umbenennung des frueheren Sammelordners in runners/: Fixture-Pfade auf corpora/fixtures/injection korrigiert, feste Wartezeit nach Gateway-Neustart durch die aktive RPC-Bereitschaftsprobe ersetzt und den zielhostspezifischen OPENCLAW_REPO-Default durch eine Pflichtvariable abgeloest. Laufzeitverhalten unveraendert; die Probe war zuvor als sleep-Override wirksam. Beim Merge in das Plugin-Repository wurden zusaetzlich zehn kompilierte __pycache__-Artefakte aus dem Inventar entfernt; sie gehoeren nicht in die Versionierung. Das Inventar umfasst seitdem 25 Quelldateien.",
+    "algorithm": "SHA-256 over UTF-8 lines '<file-sha256>  <relative-path>\\n', sorted by relative path"
+  }
+}

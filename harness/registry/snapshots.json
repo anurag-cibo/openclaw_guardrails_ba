@@ -39,11 +39,11 @@
     "source": "../experiments/harness",
     "copy": "runners",
     "status": "maintained-experiment-runners",
-    "files": 25,
-    "inventorySha256": "90c2a4e4fa2fae0929ddd65a32f1a8e21e5314c587f25a9a4e14cf743897ec67",
-    "previousInventorySha256": "dd622015be4d03ec3d3fc3c7c9236153cadb24fb87e93cf39af6b931403c113c",
+    "files": 12,
+    "inventorySha256": "dac2739d8d797a1a923fdbd51d5160b4027e39d67dec6a9db8e838a233b07f40",
+    "previousInventorySha256": "90c2a4e4fa2fae0929ddd65a32f1a8e21e5314c587f25a9a4e14cf743897ec67",
     "rebaselinedOn": "2026-08-11",
-    "rebaselineReason": "Umbenennung des frueheren Sammelordners in runners/: Fixture-Pfade auf corpora/fixtures/injection korrigiert, feste Wartezeit nach Gateway-Neustart durch die aktive RPC-Bereitschaftsprobe ersetzt und den zielhostspezifischen OPENCLAW_REPO-Default durch eine Pflichtvariable abgeloest. Laufzeitverhalten unveraendert; die Probe war zuvor als sleep-Override wirksam. Beim Merge in das Plugin-Repository wurden zusaetzlich zehn kompilierte __pycache__-Artefakte aus dem Inventar entfernt; sie gehoeren nicht in die Versionierung. Das Inventar umfasst seitdem 25 Quelldateien.",
+    "rebaselineReason": "Der Ordner enthaelt nur noch Runner, die tatsaechlich von Registry, Adaptern oder Tests referenziert werden. Zwoelf historische Skripte ohne Referenz sowie die historische Fassung des E6a-Runners wurden aus dem Artefakt entfernt; der aktive E6a-Adapter ist adapters/live/run_e6.sh. Zuvor entfielen zehn kompilierte __pycache__-Artefakte. Fixture-Pfade, Gateway-Bereitschaftspruefung und die Ablesung des OpenClaw-Pfads aus einer Pflichtvariablen sind unveraendert.",
     "algorithm": "SHA-256 over UTF-8 lines '<file-sha256>  <relative-path>\\n', sorted by relative path"
   }
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { treeInventory } from "../lib/registry.mjs";
@@ -108,8 +109,11 @@ function publicExperiments() {
 
 export async function buildPublicDistribution(outputDirectory) {
   const outputRoot = path.resolve(outputDirectory);
-  if (!inside(PUBLIC_ROOT, outputRoot)) {
-    throw new Error(`Ausgabe muss ein Unterverzeichnis von ${PUBLIC_ROOT} sein`);
+  // Das Ziel muss unterhalb des vorgesehenen Ausgabeordners oder im temporaeren
+  // Verzeichnis des Systems liegen. Damit kann ein Testlauf bauen, ohne einen
+  // Kandidaten im Projektbaum zu hinterlassen.
+  if (!inside(PUBLIC_ROOT, outputRoot) && !inside(os.tmpdir(), outputRoot)) {
+    throw new Error(`Ausgabe muss unterhalb von ${PUBLIC_ROOT} oder ${os.tmpdir()} liegen`);
   }
   await rm(outputRoot, { recursive: true, force: true });
   await mkdir(outputRoot, { recursive: true });
@@ -144,7 +148,7 @@ export async function buildPublicDistribution(outputDirectory) {
 
   await copyFile("README.md", outputRoot, "README.md");
   await copyTree("docs", outputRoot, "docs");
-  await copyFile("distribution/public/tests/public-smoke.test.mjs", outputRoot, "tests/public-smoke.test.mjs");
+  await copyFile("tests/public-smoke.test.mjs", outputRoot, "tests/public-smoke.test.mjs");
 
   const corpora = {
     schemaVersion: 1,
@@ -191,7 +195,7 @@ export async function buildPublicDistribution(outputDirectory) {
       algorithm: "SHA-256 over UTF-8 lines '<file-sha256>  <relative-path>\\n', sorted by relative path",
     },
   });
-  await writeJson(outputRoot, "distribution/capabilities.json", {
+  await writeJson(outputRoot, "registry/capabilities.json", {
     schemaVersion: 1,
     status: "release-candidate",
     includedExperiments: ["E1", "E2", "E3", "E4", "E5", "E6a", "E6b"],

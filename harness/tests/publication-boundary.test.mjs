@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -25,7 +26,7 @@ test("public pilot contains only the bounded sanitized sample", async () => {
 });
 
 test("publication policy and ignore rules protect private research data", async () => {
-  const policy = JSON.parse(await readFile(path.join(ROOT, "distribution/publication-policy.json"), "utf8"));
+  const policy = JSON.parse(await readFile(path.join(ROOT, "registry/publication-policy.json"), "utf8"));
   const ignore = await readFile(path.join(ROOT, ".gitignore"), "utf8");
   assert.equal(policy.status, "release-candidate-local");
   assert.equal(policy.publicationReviewRequired, true);
@@ -36,7 +37,7 @@ test("publication policy and ignore rules protect private research data", async 
 });
 
 test("allowlist builder creates a clean, self-testing public candidate", async () => {
-  const parent = path.join(ROOT, "runtime/public");
+  const parent = os.tmpdir();
   await mkdir(parent, { recursive: true });
   const output = await mkdtemp(path.join(parent, "test-candidate-"));
   try {

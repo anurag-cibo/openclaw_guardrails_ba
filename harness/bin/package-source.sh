@@ -11,7 +11,7 @@ rm -f "$ARCHIVE"
 # INTERNER FORSCHUNGSTRANSFER, KEINE OEFFENTLICHE DISTRIBUTION.
 # Das SCP-Quellpaket enthaelt auch private historische Korpora und temporaere,
 # nicht fuer Git bestimmte Entwicklungsdocs. Eine spaetere oeffentliche
-# Paketierung muss die Regeln aus distribution/publication-policy.json anwenden.
+# Paketierung muss die Regeln aus registry/publication-policy.json anwenden.
 tar \
   --sort=name \
   --mtime='@0' \

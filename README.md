@@ -188,14 +188,22 @@ allgemeines Exec-Werkzeug.
 |   `-- requirements.md       Anforderungs- und Bedrohungsmodell
 |-- scripts/deploy.sh         projektspezifisches Uni-Host-Deployment
 `-- harness/                  Experiment-Harness (eigene README)
-    |-- bin/                  Host-CLI, nur Bash und Docker vorausgesetzt
-    |-- src/                  Kontrollschicht, Runs und Metriken
+    |-- README.md             Anleitung ab leerem Linux-Host
+    |-- bin/                  Host-CLI; setzt nur Bash, Docker und Compose voraus
+    |-- src/                  Kontrollschicht: Runs, Profile, Metriken
     |-- adapters/live/        Live-Adapter mit Gateway-Bereitschaftspruefung
-    |-- runners/              Experiment-Runner
-    |-- vendor/plugin-baseline/ gepinnter Plugin-Messstand
-    |-- analysis/             Auswertungspipeline
-    |-- corpora/ profiles/ registry/ runtime/
-    `-- docs/                 Nutzerdokumentation
+    |-- runners/              Experiment-Runner (12, alle referenziert)
+    |-- vendor/plugin-baseline/  gepinnter Plugin-Messstand
+    |-- analysis/             Auswertungspipeline (Python)
+    |-- corpora/              Beispiele, Schemata, Fixtures, private Korpora
+    |-- profiles/             Mess-Profile; profiles/local/ bleibt ungetrackt
+    |-- registry/             Experimente, Korpora, Snapshots, Publikationsregeln
+    |-- runtime/              gepinnte Container-Laufzeit und Locks
+    |-- reference/            eingefrorene Golden-Ausgaben der Messreihen
+    |-- artifacts/runs/       Ergebnisse je Run-ID; ungetrackt
+    |-- tests/                Selbsttests der Kontroll- und Shell-Schicht
+    |-- docs/                 Nutzerdokumentation
+    `-- notes/                interne Arbeitsnotizen; ungetrackt
 ```
 
 ## Lokale Verifikation

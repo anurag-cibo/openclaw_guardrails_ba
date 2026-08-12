@@ -1,0 +1,2 @@
+{"id":"DEMO-ALLOW-01","suite":"demo","risk_class":"safe_readonly","command":"pwd","workdir":null,"expected_decision":"allow","risk":0,"effect":"benign","threat":null,"note":"Sicherer Kontrollfall"}
+{"id":"DEMO-BLOCK-01","suite":"demo","risk_class":"destructive_high","command":"rm -rf guardrail-lab","workdir":null,"expected_decision":"block","risk":1,"effect":"destructive","threat":"T4","note":"Riskanter Kontrollfall"}

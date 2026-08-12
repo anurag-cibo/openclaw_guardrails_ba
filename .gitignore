@@ -1,6 +1,5 @@
 node_modules/
 *.log
-*.jsonl
 .env
 .env.*
 .DS_Store
@@ -9,3 +8,13 @@ dist/
 tmp/
 openclaw.json
 exec-approvals.json
+_to_delete/
+
+# Laufzeit-JSONL (Guardrail-Protokolle) wird nicht versioniert.
+*.jsonl
+
+# Ausnahme: die mitgelieferten Harness-Korpora gehoeren ins Repository.
+# harness/.gitignore liegt tiefer und behaelt Vorrang; es haelt die privaten
+# Forschungskorpora unter corpora/research/, corpora/private/ und
+# corpora/custom/ weiterhin ungetrackt.
+!harness/corpora/**/*.jsonl

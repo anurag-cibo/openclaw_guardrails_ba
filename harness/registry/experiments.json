@@ -116,7 +116,7 @@
       "title": "Approval-Lifecycle",
       "level": "live",
       "runner": "approval",
-      "adapter": "runners/run_e6.sh",
+      "adapter": "adapters/live/run_e6.sh",
       "corpus": "live",
       "expected": { "unit": "runs", "count": 20 },
       "pilot": { "repetitions": 1 }

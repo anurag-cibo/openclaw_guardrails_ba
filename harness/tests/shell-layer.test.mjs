@@ -34,7 +34,7 @@ async function sourceFiles() {
       }
     }
   };
-  for (const directory of ["src", "tests", "adapters", "bin", "runners", "registry", "profiles", "distribution"]) {
+  for (const directory of ["src", "tests", "adapters", "bin", "runners", "registry", "profiles"]) {
     await walk(directory);
   }
   return found;

@@ -1323,6 +1323,52 @@ Ein Bezeichner wie `devstral-small-2:latest` kann zu einem späteren Zeitpunkt
 andere Gewichte laden. Maßgeblich für einen berichteten Lauf ist deshalb das
 Laufmanifest des Harness, nicht der Konfigurationsstring.
 
+### E-7 — Rohbefehle werden nicht redigiert
+
+**Betrifft:** FR-24, SG-03
+
+Der unveränderte Befehlstext (`rawCommand`) wird in die JSONL-Protokolle, in die
+Approval-Beschreibung der OpenClaw-Oberfläche und in den Judge-Prompt
+übernommen. `safeJson()` serialisiert, redigiert aber nicht.
+
+Ein Befehl kann Tokens, Passwörter, Header oder Terminal-Steuersequenzen
+enthalten. Für den kontrollierten Versuchskorpus dieser Arbeit ist die
+unveränderte Übernahme beabsichtigt — die Korpusbefehle sind bekannt und
+enthalten keine echten Geheimnisse, und die Auswertung braucht den exakten
+Eingabetext. Für einen Einsatz außerhalb dieses Rahmens wäre eine Redaktions-
+und Steuerzeichenbereinigung erforderlich.
+
+### E-8 — Der Judge darf auch hochriskante Kategorien freigeben
+
+**Betrifft:** FR-23, DP-06, OD-03
+
+Eskaliert werden unter anderem Wrapper, komplexe Shell-Syntax und unbekannte
+Programme. Für alle diese Kategorien darf der Judge `allow` zurückgeben; es gibt
+keine Matrix, die einzelne deterministische Risikokategorien von einer
+Judge-Freigabe ausnimmt.
+
+Die harte Grenze ist gewahrt: ein deterministisches `block` erreicht den Judge
+nie und kann von ihm nicht überschrieben werden (DP-06). Innerhalb der
+eskalierten Menge bleibt jedoch eine Angriffsfläche für Prompt-Injection und
+Fehlklassifikation. Das ist Teil des untersuchten Trade-offs zwischen
+Schutzwirkung und Aufgabenerfolg und bei der Interpretation der
+Judge-Metriken zu berücksichtigen.
+
+### E-9 — Unsicherer Default in einer exportierten Hilfsfunktion
+
+**Betrifft:** NFR-01, DP-05
+
+`resolveEnforcementAction()` in `src/approval.js` bildet ein fehlendes oder
+strukturell ungültiges Verdikt auf `allow` ab statt auf `block`.
+
+Der Hauptpfad ist davon nicht betroffen: `src/index.js` fängt jede Exception aus
+Normalisierung und Policy ab und erzeugt ein explizites `block`-Verdikt, bevor
+die Funktion aufgerufen wird (NFR-01, getestet in `tests/index.test.js`). Der
+unsichere Default besteht damit nur für einen direkten Aufruf der exportierten
+Funktion außerhalb dieses Pfades.
+
+---
+
 ---
 
 ## 19. Änderungshistorie dieses Dokuments
@@ -1331,3 +1377,4 @@ Laufmanifest des Harness, nicht der Konfigurationsstring.
 |---|---|
 | 2026-05-20 | Ursprungsfassung |
 | 2026-08-12 | Statusmodell eingeführt und alle 32 Anforderungen bewertet; §11 auf den Ist-Stand gebracht; §12 OD-02 als entschieden markiert; §13 als historisch gekennzeichnet; §2 auf das tatsächliche Lade- und Konfigurationsverfahren korrigiert; §17 (Abweichungen) und §18 (Einschränkungen) ergänzt |
+| 2026-08-12 | `docs/abgabereife-plan.md` entfernt; die drei dort noch dokumentierten Artefaktgrenzen als §18 E-7 bis E-9 übernommen |

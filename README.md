@@ -112,22 +112,43 @@ Erwartete Ausgabe am Ende:
 Alternativ ohne npm:
 
 ```sh
-node --test tests
+node --test tests/*.test.js
 ```
+
+> Nicht `node --test tests` verwenden. Unter Node 20 expandiert das noch das
+> Verzeichnis, ab Node 22 wird das Argument als einzelne Testdatei interpretiert
+> und der Lauf scheitert mit `Cannot find module`. Die Glob-Form oben
+> funktioniert unter beiden Versionen.
 
 Die Tests führen die untersuchten Shell-Kommandos **nicht** aus. Sie prüfen
 Tokenisierung, Pfad- und Symlinkbehandlung, Policy-Entscheidungen,
 Judge-Fallbacks, Approval-Routing, Logging und Hook-Komposition.
 
-## Schritt 3 — Ergebnis bewerten
+## Schritt 3 — Gesamtcheck ausführen
 
-Laufen alle 69 Tests durch, ist der Policy-Kern vollständig funktionsfähig.
+`scripts/check.sh` fasst die lokalen Prüfungen in einem Befehl zusammen:
+
+```sh
+./scripts/check.sh
+```
+
+Geprüft werden Node-Version, Testsuite, JSON-Syntax, die Übereinstimmung der
+beiden Konfigurationsschemata (`openclaw.plugin.json` gegen `src/index.js`) und
+die Übereinstimmung des Plugin-Kerns mit der Messreferenz des Harness. Erwartete
+Ausgabe:
+
+```text
+Ergebnis: alle Pruefungen bestanden.
+```
+
+Der Exitcode ist `0` bei Erfolg und `1`, sobald eine Prüfung fehlschlägt. Das
+Skript installiert nichts, führt keines der untersuchten Kommandos aus und
+verändert nichts.
+
+Laufen alle Prüfungen durch, ist der Policy-Kern vollständig funktionsfähig.
 Für die wissenschaftliche Bewertung des Quellcodes ist damit alles Nötige
 gezeigt; die Teile 3 und 4 betreffen ausschließlich den Betrieb in einer
 laufenden OpenClaw-Installation.
-
-Schlägt ein Test fehl, liegt es fast immer an einer zu alten Node-Version.
-`node --test` mit der hier verwendeten Aufrufform setzt Node 20 voraus.
 
 ---
 
@@ -706,8 +727,11 @@ Zwei weitere, nicht von E1ext erfasste Grenzen:
 Die Aussage „kein Einfluss" wurde gegen alle 798 kommandoführenden Korpuszeilen
 geprüft, nicht angenommen.
 
-Eine vollständige Aufstellung des Pflegezustands mit Prioritäten steht in
-[docs/abgabereife-plan.md](docs/abgabereife-plan.md).
+Die dokumentierten Einschränkungen des Artefakts — Messgrenze der
+protokollierten Dauer, best-effort-Protokollierung, Semantik leerer Ziel-Listen,
+Toleranz des Konfigurationsschemas, Redaktion von Rohbefehlen, Reichweite des
+Judge und der Default einer exportierten Hilfsfunktion — sind einzeln in
+[docs/requirements.md](docs/requirements.md) §18 aufgeführt.
 
 ---
 
@@ -729,9 +753,10 @@ Eine vollständige Aufstellung des Pflegezustands mit Prioritäten steht in
 |-- tests/                    Unit- und Hook-Integrationstests (69)
 |-- docs/
 |   |-- design.md             Architektur- und Schichtbeschreibung
-|   |-- requirements.md       Anforderungen und Bedrohungsmodell
-|   `-- abgabereife-plan.md   Pflege- und Maßnahmenplan
-|-- scripts/deploy.sh         projektspezifisches Uni-Host-Deployment
+|   `-- requirements.md       Anforderungen, Bedrohungsmodell, Abweichungen
+|-- scripts/
+|   |-- check.sh              lokaler Gesamtcheck (ein Befehl)
+|   `-- deploy.sh             projektspezifisches Uni-Host-Deployment
 `-- harness/                  Experiment-Harness (eigenständig, eigene README)
 ```
 
@@ -743,8 +768,8 @@ Zur Laufzeit benötigt das Plugin ausschließlich `index.js`,
 # Weiterführende Dokumentation
 
 - [Design und Entscheidungsebenen](docs/design.md)
-- [Anforderungen und Bedrohungsmodell](docs/requirements.md)
-- [Plan zur Abgabereife](docs/abgabereife-plan.md)
+- [Anforderungen und Bedrohungsmodell](docs/requirements.md) — inklusive §17
+  (bekannte Abweichungen) und §18 (dokumentierte Einschränkungen)
 - [Experiment-Harness](harness/README.md)
 
 Für die Reproduzierbarkeit eines konkreten Experiments sind zusätzlich der

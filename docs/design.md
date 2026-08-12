@@ -1,87 +1,100 @@
-# Guardrail Design
+# Guardrail-Design
 
-This plugin uses a deterministic first layer for OpenClaw `exec` tool calls.
-It does not execute shell commands while evaluating policy.
+Das Plugin verwendet eine deterministische erste Schicht für
+OpenClaw-`exec`-Toolaufrufe. Während der Policy-Bewertung wird kein
+Shell-Kommando ausgeführt.
 
-## Normalization
+## Normalisierung
 
-`src/normalize-command.js` tokenizes simple shell-like command strings, removes
-basic quotes, detects complex shell syntax, and canonicalizes target paths with
-`node:path` POSIX rules. Relative paths are resolved against the reported
-`workdir`; absolute paths are normalized directly. If the configured workspace
-exists, existing path prefixes are additionally resolved with `fs.realpathSync`
-so a symlink inside the workspace cannot hide an outside-workspace target.
-Non-existing suffixes are reconstructed below the nearest existing ancestor.
-If the workspace itself is unavailable (for example in a fixture-free offline
-run), the lexical result remains authoritative.
+`src/normalize-command.js` tokenisiert einfache shell-ähnliche Kommandostrings,
+entfernt grundlegende Quotes, erkennt komplexe Shell-Syntax und kanonisiert
+Zielpfade nach den POSIX-Regeln von `node:path`. Relative Pfade werden gegen den
+gemeldeten `workdir` aufgelöst, absolute Pfade direkt normalisiert.
 
-The important invariant is that semantically equivalent targets such as
-`guardrail-lab`, `./guardrail-lab/`, and
-`/home/node/.openclaw/workspace/guardrail-lab` map to the same canonical path.
+Existiert der konfigurierte Workspace, werden vorhandene Pfadpräfixe zusätzlich
+mit `fs.realpathSync` aufgelöst, damit ein Symlink innerhalb des Workspace kein
+Ziel außerhalb des Workspace verbergen kann. Nicht existierende Suffixe werden
+unterhalb des nächstgelegenen existierenden Vorgängers rekonstruiert. Ist der
+Workspace nicht verfügbar — etwa in einem fixture-freien Offline-Lauf —, bleibt
+das lexikalische Ergebnis maßgeblich.
 
-## Policy Decisions
+Die wesentliche Invariante lautet: semantisch gleichwertige Ziele wie
+`guardrail-lab`, `./guardrail-lab/` und
+`/home/node/.openclaw/workspace/guardrail-lab` werden auf denselben kanonischen
+Pfad abgebildet.
 
-`src/policy.js` returns one of four deterministic decisions:
+## Policy-Entscheidungen
+
+`src/policy.js` liefert eine von vier deterministischen Entscheidungen:
 
 - `allow`
 - `block`
 - `require_approval`
 - `escalate_llm`
 
-Known readonly commands are allowed. Recursive deletion of
-`workspaceRoot/guardrail-lab` is blocked. Recursive deletion of
-`workspaceRoot/guardrail-lab/tmp` requires approval. Critical destructive
-patterns such as `rm -rf /`, recursive permission changes, `dd of=...`, reboot
-commands, and `killall` are blocked.
+Bekannte Read-only-Kommandos werden erlaubt. Rekursives Löschen von
+`workspaceRoot/guardrail-lab` wird blockiert, rekursives Löschen von
+`workspaceRoot/guardrail-lab/tmp` erfordert eine Freigabe. Kritische destruktive
+Muster wie `rm -rf /`, rekursive Rechteänderungen, `dd of=...`, Reboot-Kommandos
+und `killall` werden blockiert.
 
-Workspace-local reads of sensitive basenames such as `.env`, `*.env`, `*.pem`,
-`*.key`, `credentials*`, `.netrc`, and common SSH private-key names are blocked.
-`mkfs.*` variants are treated like `mkfs`. The readonly Git exception validates
-the subcommand, rejects unsafe flags such as `--no-index`, `--ext-diff`,
-`--textconv`, and `--output`, and enforces workspace scope. A single `&` is
-classified as complex shell syntax just like the other shell operators.
+Workspace-lokale Lesezugriffe auf sensible Basenames wie `.env`, `*.env`,
+`*.pem`, `*.key`, `credentials*`, `.netrc` und verbreitete Namen privater
+SSH-Schlüssel werden blockiert. `mkfs.*`-Varianten werden wie `mkfs` behandelt.
+Die Read-only-Ausnahme für Git validiert das Subkommando, weist unsichere Flags
+wie `--no-index`, `--ext-diff`, `--textconv` und `--output` zurück und erzwingt
+den Workspace-Scope. Ein einzelnes `&` gilt wie die übrigen Shell-Operatoren als
+komplexe Shell-Syntax.
 
-Complex shell syntax, interpreter eval commands, network transfer tools, and
-unknown commands are escalated instead of allowed.
+Komplexe Shell-Syntax, Interpreter-Eval-Kommandos, Netzwerk-Transferwerkzeuge
+und unbekannte Kommandos werden eskaliert statt erlaubt.
 
-## Policy verdict and enforcement action
+> Die bekannten Reichweitengrenzen dieser Regeln — unter anderem externe
+> `grep`-Pattern-Dateien, schreibende `find`-Primaries und die musterbasierte
+> Erkennung sensibler Dateien — sind in
+> [requirements.md](requirements.md) §17 einzeln aufgeführt. Sie bilden den
+> Messgegenstand des Experiments E1ext.
 
-The policy vocabulary is deliberately separate from the OpenClaw action:
+## Policy-Verdikt und Durchsetzungsaktion
 
-- policy verdict: `allow`, `block`, `require_approval`, `escalate_llm`
-- enforcement action: `observe_allow`, `allow`, `block`, `request_approval`
+Das Policy-Vokabular ist bewusst von der OpenClaw-Aktion getrennt:
 
-`escalate_llm` routes an ambiguous deterministic verdict to the judge. It does
-not mean human approval. `require_approval` routes a final policy verdict to the
-human layer only if `hitl.enabled=true`; otherwise it is mapped to `block`.
-This keeps the normative policy result measurable while making the active
-experimental layers explicit.
+- Policy-Verdikt: `allow`, `block`, `require_approval`, `escalate_llm`
+- Durchsetzungsaktion: `observe_allow`, `allow`, `block`, `request_approval`
 
-| Input | C0 observe | C1 det | C2 det+judge | C3 det+judge+HITL |
+`escalate_llm` leitet ein mehrdeutiges deterministisches Verdikt an den Judge
+weiter. Es bedeutet **nicht** menschliche Freigabe. `require_approval` leitet ein
+finales Policy-Verdikt nur dann an die menschliche Schicht weiter, wenn
+`hitl.enabled=true` gilt; andernfalls wird es auf `block` abgebildet. Dadurch
+bleibt das normative Policy-Ergebnis messbar, während die tatsächlich aktiven
+Experimentschichten explizit bleiben.
+
+| Eingabe | C0 observe | C1 det | C2 det+judge | C3 det+judge+HITL |
 |---|---|---|---|---|
-| deterministic `allow` | observe/execute | allow | allow | allow |
-| deterministic `block` | observe/execute | block | block | block |
-| deterministic `require_approval` | observe/execute | block | block | request approval |
-| deterministic `escalate_llm` | observe/execute | block | invoke judge | invoke judge |
-| judge `allow` | n/a | n/a | allow | allow |
-| judge `block` | n/a | n/a | block | block |
-| judge `require_approval` | n/a | n/a | block | request approval |
-| judge error/timeout/low confidence | n/a | n/a | block | request approval |
+| deterministisch `allow` | beobachten/ausführen | allow | allow | allow |
+| deterministisch `block` | beobachten/ausführen | block | block | block |
+| deterministisch `require_approval` | beobachten/ausführen | block | block | Freigabe anfordern |
+| deterministisch `escalate_llm` | beobachten/ausführen | block | Judge aufrufen | Judge aufrufen |
+| Judge `allow` | n/a | n/a | allow | allow |
+| Judge `block` | n/a | n/a | block | block |
+| Judge `require_approval` | n/a | n/a | block | Freigabe anfordern |
+| Judge-Fehler/Timeout/niedrige Konfidenz | n/a | n/a | block | Freigabe anfordern |
 
-In C3, routing a judge failure to HITL is an explicit experimental design
-decision, implemented by `judge.fallbackDecision=require_approval`. It is not
-controlled by `escalateFallback`, because the latter only applies when an
-`escalate_llm` verdict reaches enforcement without an active judge.
+In C3 ist die Weiterleitung eines Judge-Fehlers an die HITL-Schicht eine
+bewusste experimentelle Designentscheidung, umgesetzt über
+`judge.fallbackDecision=require_approval`. Sie wird **nicht** über
+`escalateFallback` gesteuert, denn dieses greift nur, wenn ein
+`escalate_llm`-Verdikt ohne aktiven Judge die Durchsetzung erreicht.
 
 ## LLM-as-a-Judge
 
-`src/judge.js` implements an optional second stage for deterministic
-`escalate_llm` decisions. Deterministic `allow`, `block`, and
-`require_approval` decisions bypass the judge; a deterministic `block` decision
-must never be overwritten by the judge.
+`src/judge.js` implementiert eine optionale zweite Stufe für deterministische
+`escalate_llm`-Entscheidungen. Deterministische `allow`-, `block`- und
+`require_approval`-Entscheidungen umgehen den Judge; ein deterministisches
+`block` darf vom Judge niemals überschrieben werden.
 
-The judge calls Ollama through `POST {baseUrl}/api/chat` when enabled. The
-default runtime settings are:
+Ist der Judge aktiviert, ruft er Ollama über `POST {baseUrl}/api/chat` auf. Die
+Standardwerte zur Laufzeit sind:
 
 ```text
 judge.enabled = false
@@ -92,69 +105,88 @@ judge.fallbackDecision = block
 judge.minConfidence = medium
 ```
 
-The judge must return JSON with one final decision:
+Der Judge muss JSON mit genau einer Endentscheidung zurückgeben:
 
 - `allow`
 - `require_approval`
 - `block`
 
-It must not return `escalate_llm`. Invalid JSON, HTTP errors, timeouts,
-unavailable `fetch`, unknown decisions, invalid confidence values, low
-confidence, and `allow` below `minConfidence` all fall back fail-closed to
-`block` unless `judge.fallbackDecision` is explicitly `require_approval`.
+Er darf `escalate_llm` nicht zurückgeben. Ungültiges JSON, HTTP-Fehler,
+Timeouts, nicht verfügbares `fetch`, unbekannte Entscheidungen, ungültige
+Konfidenzwerte, niedrige Konfidenz und ein `allow` unterhalb von `minConfidence`
+führen sämtlich fail-closed auf `block` zurück — es sei denn,
+`judge.fallbackDecision` ist ausdrücklich auf `require_approval` gesetzt.
 
-Useful evaluation metrics for the second stage:
+Sinnvolle Auswertungsmetriken der zweiten Stufe:
 
 - `judge_invocation_rate`
 - `judge_latency_ms`
 - `judge_agreement_rate`
 - `judge_error_rate`
 
-The JSONL log keeps `deterministicDecision`, `judgeDecision`,
-`policyDecision`, and `enforcementAction` separate. `judgeInvoked`,
-`judgeFallbackUsed`, `hitlEnabled`, and layer durations make the configured
-path auditable.
+Das JSONL-Protokoll hält `deterministicDecision`, `judgeDecision`,
+`policyDecision` und `enforcementAction` getrennt. `judgeInvoked`,
+`judgeFallbackUsed`, `hitlEnabled` und die Schichtdauern machen den
+konfigurierten Pfad auditierbar.
 
-## Approval lifecycle evidence
+> Der Judge darf innerhalb der eskalierten Menge auch statisch riskante
+> Kategorien freigeben. Die harte Grenze — kein Überschreiben eines
+> deterministischen `block` — bleibt gewahrt. Siehe
+> [requirements.md](requirements.md) §18 E-8.
 
-For every `request_approval` action, the plugin appends an `approval_request`
-event with run/tool-call correlation, policy source, rule, command, timeout and
-allowed decisions. OpenClaw invokes the supplied `onResolution` callback and
-the plugin appends a separate `approval_resolution` event. The experiment
-responder additionally stores the complete Gateway request object, its
-`plugin:` ID and the resolve RPC response. This dual evidence is used for the
-unattended deny/allow-once/timeout evaluation; measured latency is a system
-lifecycle metric, not human reaction time.
+## Nachweise des Approval-Lifecycles
 
-## Configuration definition of done
+Für jede `request_approval`-Aktion hängt das Plugin ein
+`approval_request`-Ereignis an, mit Korrelation zu Run und Toolaufruf,
+Policy-Quelle, Regel, Kommando, Timeout und erlaubten Entscheidungen. OpenClaw
+ruft den übergebenen `onResolution`-Callback auf, und das Plugin hängt ein
+separates `approval_resolution`-Ereignis an. Der Experiment-Responder speichert
+zusätzlich das vollständige Gateway-Requestobjekt, dessen `plugin:`-ID und die
+Antwort des Resolve-RPC.
 
-`e6Harness.enabled` is `false` by default. During E6 only, the runner enables
-the optional `guardrail_e6_exec` driver. It is restricted to the read-only
-`pwd` preflight and the fixed disposable-fixture command
-`rm -rf guardrail-lab/tmp`. It isolates the OpenClaw approval lifecycle; E5
-continues to test integration with the real core `exec` tool.
+Diese doppelte Beweisführung wird für die unbeaufsichtigte Auswertung von
+Deny, Allow-once und Timeout verwendet. Die gemessene Latenz ist eine
+Systemlifecycle-Metrik, **keine** menschliche Reaktionszeit.
 
-The configuration step is complete when all of the following hold:
+## Definition of Done der Konfiguration
 
-1. C0 never returns a blocking or approval hook result.
-2. C0 never invokes the judge, even if stale configuration says it is enabled.
-3. C1 allows deterministic `allow`.
-4. C1 preserves deterministic `block`.
-5. C1 maps deterministic `require_approval` to `block`.
-6. C1 maps unresolved `escalate_llm` to `block`.
-7. C2 invokes the judge only for `escalate_llm`; deterministic `block` is never overridden.
-8. C2 enforces judge `allow` as `allow`.
-9. C2 enforces judge `block` as `block`.
-10. C2 maps judge `require_approval` and judge fallback to `block`.
-11. C3 maps deterministic/judge `require_approval` and judge fallback to `request_approval`, while preserving regular `block`.
-12. Logs distinguish deterministic, judge, final policy, and enforcement values.
+`e6Harness.enabled` ist standardmäßig `false`. Nur während E6 aktiviert der
+Runner den optionalen Treiber `guardrail_e6_exec`. Er ist auf den read-only
+`pwd`-Preflight und das feste Wegwerf-Fixture-Kommando
+`rm -rf guardrail-lab/tmp` beschränkt. Er isoliert den
+OpenClaw-Approval-Lifecycle; E5 prüft weiterhin die Integration mit dem echten
+Core-Werkzeug `exec`.
 
-The unit and hook-integration tests in `tests/approval.test.js`,
-`tests/judge.test.js`, and `tests/index.test.js` cover this contract.
+Der Konfigurationsschritt gilt als abgeschlossen, wenn alle folgenden Punkte
+zutreffen:
+
+1. C0 liefert niemals ein blockierendes oder ein Approval-Hook-Ergebnis.
+2. C0 ruft den Judge niemals auf, selbst wenn eine veraltete Konfiguration ihn
+   als aktiviert ausweist.
+3. C1 erlaubt deterministisches `allow`.
+4. C1 erhält deterministisches `block`.
+5. C1 bildet deterministisches `require_approval` auf `block` ab.
+6. C1 bildet ein ungelöstes `escalate_llm` auf `block` ab.
+7. C2 ruft den Judge ausschließlich bei `escalate_llm` auf; ein
+   deterministisches `block` wird nie überschrieben.
+8. C2 setzt ein Judge-`allow` als `allow` durch.
+9. C2 setzt ein Judge-`block` als `block` durch.
+10. C2 bildet Judge-`require_approval` und Judge-Fallback auf `block` ab.
+11. C3 bildet deterministisches und Judge-`require_approval` sowie den
+    Judge-Fallback auf `request_approval` ab und erhält reguläre `block`-Fälle.
+12. Die Protokolle unterscheiden deterministische, Judge-, finale Policy- und
+    Durchsetzungswerte.
+
+Die Unit- und Hook-Integrationstests in `tests/approval.test.js`,
+`tests/judge.test.js` und `tests/index.test.js` decken diesen Vertrag ab.
 
 ## Deployment
 
-Deployment is external. The plugin is meant to be copied to the Uni-host by the
-existing `scripts/deploy.sh` workflow and then tested in OpenClaw via the WebUI.
-Local development in this repository should use `npm test` or
+Das Deployment liegt außerhalb dieses Moduls. Das Plugin wird über den
+bestehenden Ablauf `scripts/deploy.sh` auf den Uni-Host kopiert und anschließend
+in OpenClaw über die WebUI getestet. Die vollständige Installationsanleitung
+einschließlich der manuellen Variante steht in der [README](../README.md),
+Teil 3.
+
+Für die lokale Entwicklung in diesem Repository genügen `npm test` oder
 `node --test tests`.
